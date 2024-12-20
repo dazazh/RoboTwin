@@ -67,11 +67,9 @@ def run(Demo_class, args):
     seed_list=[]   
     suc_num = 0    
     fail_num = 0   
-    count = 0
 
     if not args['use_seed']:
-        while count < 3:
-            count += 1
+        while suc_num < args['episode_num']:
             try:
                 Demo_class.setup_demo(now_ep_num=suc_num, seed = epid, **args)
                 Demo_class.play_once()
