@@ -8,7 +8,7 @@
             "x_limit": [[-0.25, -0.05], [0.05, 0.25]],  // X-coordinate limits for object generation
             "y_limit": [[-0.2, 0.05]],                // Y-coordinate limits for object generation
             "z_limit": [[0.78]],                     // Z-coordinate limits for object generation
-            "qpose": [[1, 0, 0, 0]],                 // Initial orientation of the object as a quaternion
+            "qpose": [[0.7071,0,0,-0.7071]],                 // Initial orientation of the object as a quaternion
             "is_static_or_fix_root_link": false,     // Whether the object is fixed
             "ylim_prop": true,               // Protection for the generated y-coordinate range to prevent object generation
             "rotate_tag": false,            // Whether the object rotates randomly

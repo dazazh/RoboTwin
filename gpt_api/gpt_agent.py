@@ -7,7 +7,7 @@ def generate(message, gpt="deepseek"):
         MODEL = "deepseek-chat"
         OPENAI_API_BASE="https://api.deepseek.com"
         # Set your API key here
-        OPENAI_API_KEY="Your API Key"
+        OPENAI_API_KEY="sk-0bc806156bb04622817a392d809b92e9"
 
     client = OpenAI(api_key=OPENAI_API_KEY, base_url="https://api.deepseek.com")
     print('start generating')

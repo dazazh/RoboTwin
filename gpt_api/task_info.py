@@ -202,3 +202,28 @@ PICK_APPLE_MESSY = {
                         pass
                 ''' 
 }
+
+# BEAKER_GRASP = {
+#     "task_name": "beaker_grasp",
+#     "task_description": "Pick up the beaker and place it on the table. If the beaker's x coordinate (dim 0) is greater than 0, use right arm to grasp the beaker, \
+#                         else use the left arm.",
+#     "current_code": '''
+#                 class gpt_beaker_grasp(beaker_grasp):
+#                     def play_once(self):
+#                         pass
+#                 '''
+# }
+
+BEAKER_GRASP = {
+    "task_name": "beaker_grasp",
+    "task_description": "Use both arms to pick up the beaker from the lateral side and place it on the coaster. If the beaker's x coordinate (dim 0) is greater than 0, \
+                        use right arm to grasp the beaker, then pick up the beaker and place it on the coaster,\
+                        else use the left arm grasp the the beaker, then pick up the beaker from the lateral side and place it on the coaster.\
+                        Note: Do not close the gripper too tight to pick up the beaker,the degree of closure shold be\
+                                slightly smaller than the diameter of the beaker for better suitablity.",
+    "current_code": '''
+                class gpt_beaker_grasp(beaker_grasp):
+                    def play_once(self):
+                        pass
+                '''
+}

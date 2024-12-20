@@ -1,5 +1,5 @@
 task_name: gpt_dual_bottles_pick_hard
-render_freq: 0
+render_freq: 5
 use_seed: false
 collect_data: true
 save_path: ./data

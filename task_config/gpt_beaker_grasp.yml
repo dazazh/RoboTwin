@@ -1,4 +1,4 @@
-task_name: gpt_mug_hanging
+task_name: gpt_beaker_grasp
 render_freq: 5
 use_seed: false
 collect_data: true
