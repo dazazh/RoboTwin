@@ -1,0 +1,14 @@
+aloha_maniskill_sim/
+models/
+data/
+__pycache__/
+policy/3D-Diffusion-Policy/3D-Diffusion-Policy/data/
+policy/3D-Diffusion-Policy/3D-Diffusion-Policy/checkpoints/
+result/
+asset.zip
+aloha_maniskill_sim_modify/
+models_copy/
+result_dp3/
+task_config/seeds/*.txt
+third_party/
+gpt_api/*

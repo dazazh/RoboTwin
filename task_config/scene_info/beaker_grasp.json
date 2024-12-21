@@ -1,0 +1,43 @@
+{
+    "actor_info_list":[
+        {
+            "actor_name": "beaker",
+            "actor_file": "043_beaker",
+            "actor_type": "glb",
+            "x_limit":[[0.15,0.3],[-0.3,-0.15]],
+            "y_limit":[[0.13,0.15]],
+            "z_limit":[[0.8]],
+            "qpose":[[0.707,0.707,0,0]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":true,
+            "rotate_tag": false,
+            "rotate_limit":[],
+            "convex":false,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.01
+        },
+        {
+            "actor_name": "coaster",
+            "actor_file": "019_coaster",
+            "actor_type": "obj",
+            "x_limit":[[-0.05,0.1],[-0.1, 0.05]],
+            "y_limit":[[0.13,0.15]],
+            "z_limit":[[0.76]],
+            "qpose":[[0.707,0.707,0,0]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[],
+            "convex":true,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.01
+        }
+    ],
+    "actor_dis_lim_mat":[[0,0.1],[0,1,0]],
+    "actor_position_link": true,
+    "actor_position_num":2
+}

@@ -1,0 +1,48 @@
+{
+    "actor_info_list":[
+        {
+            "actor_name": "grasp_block",
+            "actor_file": "",
+            "actor_type": "box",
+            "half_size":[0.03,0.03,0.1],
+            "color":[1,0,0],
+            "x_limit":[[-0.25,-0.05]],
+            "y_limit":[[0,0.25]],
+            "z_limit":[[0.842]],
+            "qpose":[[-0.906,0,0,-0.424]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":false,
+            "rotate_tag": true,
+            "rotate_limit":[[0,0,1.57]],
+            "convex":true,
+            "z_val_protect":false,
+            "actor_data_from":"create_grasp_block_data",
+            "rand_model_id": false,
+            "mass": 0.01
+        },
+        {
+            "actor_name": "target_block",
+            "actor_file": "",
+            "actor_type": "box",
+            "half_size":[0.05,0.05,0.005],
+            "color":[0,0,1],
+            "x_limit":[[0.1,0.25]],
+            "y_limit":[[0.05,0.15]],
+            "z_limit":[[0.74]],
+            "qpose":[[1,0,0,0]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[],
+            "convex":true,
+            "z_val_protect":false,
+            "actor_data_from":"create_target_block_data",
+            "rand_model_id": false,
+            "mass": 1
+        }
+    ],
+    "actor_dis_lim_mat":[],
+    "actor_position_link": false,
+    "actor_position_num":0,
+    "other_actor_data":["handover_block_pose"]
+}
