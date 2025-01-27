@@ -142,8 +142,8 @@ class Base_task(gym.Env):
         self.scene.add_ground(kwargs.get("ground_height", 0))
         # set default physical material
         self.scene.default_physical_material = self.scene.create_physical_material(
-            kwargs.get("static_friction", 0.5),
-            kwargs.get("dynamic_friction", 0.5),
+            kwargs.get("static_friction", 0.9),
+            kwargs.get("dynamic_friction", 0.9),
             kwargs.get("restitution", 0),
         )
         # give some white ambient light of moderate intensity

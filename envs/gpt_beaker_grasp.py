@@ -40,7 +40,7 @@ class gpt_beaker_grasp(beaker_grasp):
         move_function(target_grasp_pose)
         
         # Close the gripper to grasp the beaker
-        close_gripper_function(pos=0.01)  # Adjust the position to ensure a gentle grasp
+        close_gripper_function(pos=0.012)  # Adjust the position to ensure a gentle grasp
         
         # Lift the beaker slightly
         lift_pose = pre_grasp_pose.copy()

@@ -48,7 +48,8 @@ names = [
     "shoe_place",
     "blocks_stack_hard",
     "dual_bottles_pick_easy",
-    "shoes_place"
+    "shoes_place",
+    "beaker_grasp"
 ]
 
 output_dir = "./"
@@ -57,7 +58,7 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 for orig_name in names:
-    num = ['10', '20', '50', '100']
+    num = ['10', '20', '50','60', '100']
     for x in num:
         name = orig_name + '_' + x
         content = content_template.format(name=name)

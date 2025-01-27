@@ -1,7 +1,7 @@
 
 ```yml
 task_name: ...          # Task name
-render_freq: 0          # Rendering window frequency, set to 0 to disable rendering window
+render_freq: 5          # Rendering window frequency, set to 0 to disable rendering window
 use_seed: false         # Whether to use an existing seed list for data collection
 collect_data: true      # Whether data collection is required
 save_path: ./data       # Data save path

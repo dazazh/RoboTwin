@@ -1,17 +1,16 @@
-task_name: gpt_beaker_grasp
-render_freq: 5
+task_name: tube_grasp
+render_freq: 0
 use_seed: false
-collect_data: false
-save_path: /media/robot4chem/T7/datasets/RoboTwin/
+collect_data: true
+save_path: ./data
 dual_arm: true
 st_episode: 0
 camera_w: 320
 camera_h: 240
 pcd_crop: true
 pcd_down_sample_num: 1024
-episode_num: 200
-save_freq: 15
-head_camera_fovy: 45
+pose_type: gt
+episode_num: 20
 save_type:
   raw_data: false
   pkl: true
@@ -20,9 +19,8 @@ data_type:
   observer: false
   depth: true
   pointcloud: true
-  conbine: false
+  conbine: true
   endpose: true
   qpos: true
   mesh_segmentation: false
   actor_segmentation: false
- 

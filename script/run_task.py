@@ -29,7 +29,7 @@ def main():
             'render_freq': 0,
             'use_seed': False,
             'collect_data': True,
-            'save_path': './data',
+            'save_path': '.data/',
             'dual_arm': True,
             'st_episode': 0 ,
             'camera_w': 320,
@@ -86,7 +86,8 @@ def run(Demo_class, args):
                 if (args['render_freq']):
                     Demo_class.viewer.close()
                 epid +=1
-            except:
+            except EOFError as e:
+                print(e)
                 print(f"simulate data episode {suc_num} fail! (seed = {epid})   ")
                 fail_num +=1
                 Demo_class.close()

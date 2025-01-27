@@ -12,3 +12,5 @@ result_dp3/
 task_config/seeds/*.txt
 third_party/
 gpt_api/*
+*.tar
+*.zip
