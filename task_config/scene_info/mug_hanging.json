@@ -1,0 +1,44 @@
+{
+    "actor_info_list":[
+        {
+            "actor_name": "mug",
+            "actor_file": "039_mug",
+            "actor_type": "glb",
+            "x_limit":[[-0.25,-0.1]],
+            "y_limit":[[-0.05,0.1]],
+            "z_limit":[[0.79]],
+            "qpose":[[0.707,0.707,0,0]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":true,
+            "rotate_tag": true,
+            "rotate_limit":[[0,1.57,0]],
+            "convex":false,
+            "z_val_protect":true,
+            "actor_data_from":"file",
+            "rand_model_id": true,
+            "mass": 0.001
+        },
+        {
+            "actor_name": "rack",
+            "actor_file": "040_rack",
+            "actor_type": "obj",
+            "x_limit":[[0.1,0.3]],
+            "y_limit":[[0.05,0.2]],
+            "z_limit":[[0.745]],
+            "qpose":[[-0.22, -0.22, 0.67, 0.67]],
+            "is_static_or_fix_root_link":true,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[],
+            "convex":true,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.0
+        }
+    ],
+    "actor_dis_lim_mat":[],
+    "actor_position_link": false,
+    "actor_position_num":0,
+    "other_actor_data": ["middle_pose_of_left_arm"]
+}

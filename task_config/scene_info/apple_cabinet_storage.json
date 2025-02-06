@@ -1,0 +1,43 @@
+{
+    "actor_info_list":[
+        {
+            "actor_name": "cabinet",
+            "actor_file": "036_cabinet",
+            "actor_type": "urdf",
+            "x_limit":[[0,0]],
+            "y_limit":[[0.155,0.155]],
+            "z_limit":[[0.96]],
+            "qpose":[[1,0,0,1]],
+            "is_static_or_fix_root_link":true,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[],
+            "convex":false,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.0
+        },
+        {
+            "actor_name": "apple",
+            "actor_file": "035_apple",
+            "actor_type": "obj",
+            "x_limit":[[0.2,0.32]],
+            "y_limit":[[-0.2,-0.1]],
+            "z_limit":[[0.78]],
+            "qpose":[[1,0,0,0]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[],
+            "convex":true,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.01
+        }
+    ],
+    "actor_dis_lim_mat":[],
+    "actor_position_link": false,
+    "actor_position_num":0
+}

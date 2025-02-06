@@ -1,0 +1,62 @@
+{
+    "actor_info_list":[
+        {
+            "actor_name": "test_tube",
+            "actor_file": "045_test_tube",
+            "actor_type": "glb",
+            "x_limit":[[-0.25,-0.15]],
+            "y_limit":[[0,0]],
+            "z_limit":[[0.865]],
+            "qpose":[[1,0,0,0]],
+            "is_static_or_fix_root_link":false,
+            "ylim_prop":false,
+            "rotate_tag": true,
+            "rotate_limit":[[0,1.57,0],[0,1.57,0]],
+            "convex":true,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.01
+        },
+        {
+            "actor_name": "test_tube_rack",
+            "actor_file": "046_test_tube_rack",
+            "actor_type": "glb",
+            "x_limit":[[0]],
+            "y_limit":[[0.2]],
+            "z_limit":[[0.74]],
+            "qpose":[[0.7071,0.7071,0,0]],
+            "is_static_or_fix_root_link":true,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[[0,0,0]],
+            "convex":false,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.05
+        },
+        {
+            "actor_name": "plastic_container",
+            "actor_file": "047_plastic_container",
+            "actor_type": "glb",
+            "x_limit":[[-0.2]],
+            "y_limit":[[0.0]],
+            "z_limit":[[0.74]],
+            "qpose":[[0.7071,0.7071,0,0]],
+            "is_static_or_fix_root_link":true,
+            "ylim_prop":false,
+            "rotate_tag": false,
+            "rotate_limit":[[0,0,0]],
+            "convex":false,
+            "z_val_protect":false,
+            "actor_data_from":"file",
+            "rand_model_id": false,
+            "mass": 0.1
+        }
+    ],
+    "actor_dis_lim_mat":[],
+    "actor_position_link": false,
+    "actor_position_num":0,
+    "other_actor_data":["left_tube_mid_position","right_tube_mid_position"]
+}
