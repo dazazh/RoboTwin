@@ -103,7 +103,7 @@ class TrainDP3Workspace:
         
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = self.get_checkpoint_path()
+            lastest_ckpt_path = self.cfg.training.latest_ckpt_path
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
