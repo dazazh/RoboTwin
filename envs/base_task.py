@@ -192,7 +192,7 @@ class Base_task(gym.Env):
             self.scene,
             sapien.Pose(p=[0, 0, 0.74]),
             length=1.2,
-            width=0.7,
+            width=0.9,
             height=0.74,
             thickness=0.05,
             is_static=self.table_static
@@ -1645,8 +1645,6 @@ class Base_task(gym.Env):
     def get_grasp_pose_w_labeled_direction(self, actor, actor_data = DEFAULT_ACTOR_DATA, grasp_matrix = np.eye(4), pre_dis = 0, id = 0):
         actor_matrix = actor.get_pose().to_transformation_matrix()
         local_contact_matrix = np.asarray(actor_data['contact_pose'][id])
-        # print(actor_data['contact_pose'])
-        # print(local_contact_matrix)
         trans_matrix = np.asarray(actor_data['trans_matrix'])
         local_contact_matrix[:3,3] *= actor_data['scale']
         global_contact_pose_matrix = actor_matrix  @ local_contact_matrix @ trans_matrix @ grasp_matrix @ np.array([[0,0,1,0],[-1,0,0,0],[0,-1,0,0],[0,0,0,1]])

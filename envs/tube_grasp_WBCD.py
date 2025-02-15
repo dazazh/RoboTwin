@@ -43,7 +43,7 @@ class tube_grasp_WBCD(Base_task):
             self.scene,
             xlim=[0],
             ylim=[0.25],
-            zlim=[0.79],
+            zlim=[0.80],
             modelname="048_rackA",
             rotate_rand=False,
             convex=False,
@@ -109,12 +109,12 @@ class tube_grasp_WBCD(Base_task):
         move_function(mid_position)
 
         tube_above_rack_pose = self.get_grasp_pose_w_labeled_direction(actor=self.test_tube_rack, actor_data=self.test_tube_rack_data, grasp_matrix=np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]), pre_dis=0.035, id=0)
-        tube_above_rack_pose[2]+=0.24
+        tube_above_rack_pose[2]+=0.12
         tube_above_rack_pose[0]+=0.015
         move_function(tube_above_rack_pose)
 
         tube_in_rack_pose = tube_above_rack_pose
-        tube_in_rack_pose[2]-=0.21
+        tube_in_rack_pose[2]-=0.09
         move_function(tube_in_rack_pose)
 
         open_gripper_function()
