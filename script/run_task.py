@@ -163,6 +163,7 @@ def run(Demo_class, args):
                 save_json(Demo_class.file_path["r_pcd"]+"config.json", right_config)
 
             Demo_class.close()
+            print(Demo_class.check_success())
             print('\nsuccess!')
 
             
