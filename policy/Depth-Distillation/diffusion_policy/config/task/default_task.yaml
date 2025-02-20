@@ -1,12 +1,16 @@
 name: task_config
 
-image_shape: &image_shape [3, -1, -1]
+image_shape: &image_shape [4, -1, -1]
+depth_shape: &depth_shape [1, -1, -1]
 shape_meta: &shape_meta
   # acceptable types: rgb, low_dim
   obs:
     head_cam:
       shape: *image_shape
       type: rgb
+    head_cam_depth:
+      shape: *depth_shape
+      type: depth
     # front_cam:
     #   shape: *image_shape
     #   type: rgb

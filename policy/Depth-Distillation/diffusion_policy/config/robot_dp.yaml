@@ -43,7 +43,7 @@ policy:
     resize_shape: null
     crop_shape: null
     # constant center crop
-    random_crop: True
+    random_crop: False
     use_group_norm: True
     share_rgb_model: False
     imagenet_norm: True
@@ -101,7 +101,7 @@ training:
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
-  num_epochs: 300
+  num_epochs: 900
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
@@ -110,7 +110,7 @@ training:
   # training loop control
   # in epochs
   rollout_every: 50
-  checkpoint_every: 300
+  checkpoint_every: 150
   val_every: 1
   sample_every: 5
   # steps per epoch
@@ -151,4 +151,5 @@ hydra:
     subdir: ${hydra.job.num}
 
 head_camera_type: null
+head_camera_depth_type: null
 expert_data_num: null

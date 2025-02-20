@@ -58,7 +58,6 @@ class RobotWorkspace(BaseWorkspace):
     def run(self):
         cfg = copy.deepcopy(self.cfg)
         seed = cfg.training.seed
-        head_camera_type = cfg.head_camera_type
 
         # resume training
         if cfg.training.resume:
@@ -161,6 +160,7 @@ class RobotWorkspace(BaseWorkspace):
                 train_losses = list()
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
                         leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
+                    print(123)
                     for batch_idx, batch in enumerate(tepoch):
                         batch = dataset.postprocess(batch, device)
                         if train_sampling_batch is None:

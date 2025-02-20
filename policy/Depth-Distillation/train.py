@@ -41,13 +41,19 @@ def main(cfg: OmegaConf):
     # resolve immediately so all the ${now:} resolvers
     # will use the same time.
     head_camera_type = cfg.head_camera_type
+    head_camera_depth_type = cfg.head_camera_depth_type
     head_camera_cfg = get_camera_config(head_camera_type)
-    cfg.task.image_shape = [3, head_camera_cfg['h'], head_camera_cfg['w']]
-    cfg.task.shape_meta.obs.head_cam.shape = [3, head_camera_cfg['h'], head_camera_cfg['w']]
+    head_camera_depth_cfg = get_camera_config(head_camera_depth_type)
+    cfg.task.image_shape = [4, head_camera_cfg['h'], head_camera_cfg['w']]
+    cfg.task.depth_shape = [1, head_camera_depth_cfg['h'], head_camera_depth_cfg['w']]
+    cfg.task.shape_meta.obs.head_cam.shape = [4, head_camera_cfg['h'], head_camera_cfg['w']]
+    cfg.task.shape_meta.obs.head_cam_depth.shape = [1, head_camera_depth_cfg['h'], head_camera_depth_cfg['w']]
     OmegaConf.resolve(cfg)
-    cfg.task.image_shape = [3, head_camera_cfg['h'], head_camera_cfg['w']]
-    cfg.task.shape_meta.obs.head_cam.shape = [3, head_camera_cfg['h'], head_camera_cfg['w']]
-
+    cfg.task.image_shape = [4, head_camera_cfg['h'], head_camera_cfg['w']]
+    cfg.task.depth_shape = [1, head_camera_depth_cfg['h'], head_camera_depth_cfg['w']]
+    cfg.task.shape_meta.obs.head_cam.shape = [4, head_camera_cfg['h'], head_camera_cfg['w']]
+    cfg.task.shape_meta.obs.head_cam_depth.shape = [1, head_camera_depth_cfg['h'], head_camera_depth_cfg['w']]
+    print("asdasd")
     cls = hydra.utils.get_class(cfg._target_)
     workspace: BaseWorkspace = cls(cfg)
     print(cfg.task.dataset.zarr_path, cfg.task_name)

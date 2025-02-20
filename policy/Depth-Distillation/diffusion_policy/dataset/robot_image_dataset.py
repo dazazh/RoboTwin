@@ -28,9 +28,8 @@ class RobotImageDataset(BaseImageDataset):
         self.replay_buffer = ReplayBuffer.copy_from_path(
             zarr_path,
             # keys=['head_camera', 'front_camera', 'left_camera', 'right_camera', 'state', 'action'],
-            keys=['head_camera', 'state', 'action']
+            keys=['head_camera', 'head_depth', 'state', 'action']
         )
-            
         val_mask = get_val_mask(
             n_episodes=self.replay_buffer.n_episodes, 
             val_ratio=val_ratio,
@@ -51,7 +50,6 @@ class RobotImageDataset(BaseImageDataset):
         self.horizon = horizon
         self.pad_before = pad_before
         self.pad_after = pad_after
-
         self.batch_size = batch_size
         sequence_length = self.sampler.sequence_length
         self.buffers = {
@@ -93,6 +91,7 @@ class RobotImageDataset(BaseImageDataset):
     def _sample_to_data(self, sample):
         agent_pos = sample['state'].astype(np.float32) # (agent_posx2, block_posex3)
         head_cam = np.moveaxis(sample['head_camera'],-1,1)/255
+        head_cam_depth = np.moveaxis(sample['head_depth'],-1,1)/255
         # front_cam = np.moveaxis(sample['front_camera'],-1,1)/255
         # left_cam = np.moveaxis(sample['left_camera'],-1,1)/255
         # right_cam = np.moveaxis(sample['right_camera'],-1,1)/255
@@ -119,6 +118,8 @@ class RobotImageDataset(BaseImageDataset):
         elif isinstance(idx, np.ndarray):
             assert len(idx) == self.batch_size
             for k, v in self.sampler.replay_buffer.items():
+                # print("getitem k:",k)
+                # print(self.buffers[k].shape)
                 batch_sample_sequence(self.buffers[k], v, self.sampler.indices, idx, self.sampler.sequence_length)
             return self.buffers_torch
         else:
@@ -127,6 +128,10 @@ class RobotImageDataset(BaseImageDataset):
     def postprocess(self, samples, device):
         agent_pos = samples['state'].to(device, non_blocking=True)
         head_cam = samples['head_camera'].to(device, non_blocking=True) / 255.0
+        head_depth = samples['head_depth'].to(device, non_blocking=True)
+        head_depth = torch.unsqueeze(head_depth, dim=2)
+        head_cam = torch.cat([head_cam, head_depth], dim=2)
+        print(head_cam.shape)
         # front_cam = samples['front_camera'].to(device, non_blocking=True) / 255.0
         # left_cam = samples['left_camera'].to(device, non_blocking=True) / 255.0
         # right_cam = samples['right_camera'].to(device, non_blocking=True) / 255.0

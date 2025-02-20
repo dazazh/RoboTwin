@@ -3,6 +3,7 @@ import copy
 import torch
 import torch.nn as nn
 import torchvision
+from diffusion_policy.model.vision.rgbd_normalizer import RGBDNormalizer
 from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
@@ -81,7 +82,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                         size=(h,w)
                     )
                     input_shape = (shape[0],h,w)
-
+                print("input_shape",input_shape)
                 # configure randomizer
                 this_randomizer = nn.Identity()
                 if crop_shape is not None:
@@ -104,15 +105,20 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 # configure normalizer
                 this_normalizer = nn.Identity()
                 if imagenet_norm:
-                    this_normalizer = torchvision.transforms.Normalize(
+                    # this_normalizer = torchvision.transforms.Normalize(
+                    #     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                    this_normalizer = RGBDNormalizer(
                         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                 
                 this_transform = nn.Sequential(this_resizer, this_randomizer, this_normalizer)
                 key_transform_map[key] = this_transform
             elif type == 'low_dim':
                 low_dim_keys.append(key)
+            elif type == 'depth':
+                continue
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
+            # print(key_shape_map)
         rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
 
@@ -155,11 +161,15 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # run each rgb obs to independent models
             for key in self.rgb_keys:
                 img = obs_dict[key]
+                # print("img_shape:",img.shape)
+                # print(self.key_shape_map[key])
                 if batch_size is None:
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == self.key_shape_map[key]
+                # print(self.key_transform_map[key])
+                # print(img.shape)
                 img = self.key_transform_map[key](img)
                 feature = self.key_model_map[key](img)
                 features.append(feature)
