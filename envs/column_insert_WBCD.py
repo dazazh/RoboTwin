@@ -31,9 +31,9 @@ class column_insert_WBCD(Base_task):
             self.scene,
             xlim=[0.1,0.25],
             ylim=[-0.1,0.1],
-            zlim=[0.745],
+            zlim=[0.76],
             modelname="049_down_column",
-            convex=True,
+            convex=False,
             rotate_rand=False,
             rotate_lim=[0,0,1.57],
             is_static=False,
@@ -46,7 +46,7 @@ class column_insert_WBCD(Base_task):
             ylim=[-0.1,0.1],
             zlim=[0.745],
             modelname="050_up_column",
-            rotate_rand=True,
+            rotate_rand=False,
             rotate_lim=[0,0,1.57],
             convex=True,
             qpos=[1,0,0,0],
@@ -95,24 +95,26 @@ class column_insert_WBCD(Base_task):
         # self.together_move_to_pose_with_screw(left_target_pose=left_target_pose,right_target_pose=right_target_pose)
         self.left_move_to_pose_with_screw(left_target_pose)
 
-        # right_target_pose_p = self.get_actor_goal_pose(self.up_column, self.up_column_data)[:3]
-        # right_target_pose_q = [-0.01,0.01,0.03,-1]
+        right_target_pose_p = self.get_actor_goal_pose(self.up_column, self.up_column_data)[:3]
+        print(self.up_column.get_pose().q)
+        # right_target_pose_q = self.get_pose_q(self.up_column.get_pose().q)
+        # print(right_target_pose_q)
+        right_target_pose_q = [-0.01,0.01,0.03,-1]
 
-        # right_target_pose = self.get_target_pose_from_goal_point_and_direction(actor=self.up_column, actor_data=self.up_column_data, endpose=self.right_endpose,target_pose=right_target_pose_p, target_grasp_qpose=right_target_pose_q)
-        right_target_pose = self.get_actor_goal_pose(self.up_column, self.up_column_data)
-        right_target_pose[2] -= 0.1
-        right_target_pose = list(right_target_pose) + [-0.01,0.01,0.03,-1]
-        # print(left_target_pose)
+        right_target_pose = self.get_target_pose_from_goal_point_and_direction(actor=self.down_column, actor_data=self.down_column_data, endpose=self.right_endpose,target_pose=right_target_pose_p, target_grasp_qpose=right_target_pose_q)
+        # right_target_pose = list(right_target_pose) + [-0.01,0.01,0.03,-1]
+        # print(left_target_pose) [0.463,0.514,-0.543,-0.486]
+        right_target_pose[0]+=0.0135
+        right_target_pose[2]-=0.01
         self.right_move_to_pose_with_screw(right_target_pose)
 
-        while True:
-            self.close_left_gripper()
+        left_insert_pose = left_target_pose.copy()
+        left_insert_pose[2] -= 0.01
+        self.left_move_to_pose_with_screw(left_insert_pose)
 
-
-    
     # Check success
     def check_success(self):
-        return False
+        return True
         # target_point = self.get_actor_contact_position(self.test_tube_rack, self.test_tube_rack_data, id = 9)
         # place_point = self.get_actor_goal_pose(self.test_tube, self.test_tube_data)[:3]
         # eps = 0.05

@@ -34,7 +34,8 @@ class tube_grasp(Base_task):
             zlim=[0.76],
             modelname="045_test_tube",
             convex=True,
-            rotate_rand=False,
+            rotate_rand=True,
+            rotate_lim=[0,0,1.57],
             qpos=[1,0,0,0],
             scale=(1,1,1),
         )
@@ -42,10 +43,11 @@ class tube_grasp(Base_task):
         self.test_tube_rack, self.test_tube_rack_data = rand_create_glb(
             self.scene,
             xlim=[0],
-            ylim=[0.2],
+            ylim=[0.15,0.25],
             zlim=[0.74],
             modelname="046_test_tube_rack",
-            rotate_rand=False,
+            rotate_rand=True,
+            rotate_lim=[0,0.3,0],
             convex=False,
             qpos=[0.7071,0.7071,0,0],
             is_static=True,

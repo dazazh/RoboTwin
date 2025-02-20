@@ -1717,6 +1717,26 @@ class Base_task(gym.Env):
         grasp_matrix[:3, 3] = np.array([trans_x, trans_y, trans_z])
 
         return grasp_matrix
+    
+    def get_pose_q(self,q2):
+        # 设定 q3 的 x 分量为 0，因与 q1 垂直
+        x3 = 0
+
+        # 假设 q3 的 y 分量为 1，求解 w3 和 z3
+        y3 = 1
+
+        # 线性方程 q2 . q3 = 0，求解 w3 和 z3
+        # w2 * w3 + y2 * y3 + z2 * z3 = 0
+        # 由于 y3 = 1, 方程简化为：w2 * w3 + y2 * 1 + z2 * z3 = 0
+        # 假设 z3 = 0，求解 w3
+        z3 = 0
+
+        # 求解 w3
+        w3 = -(q2[2] * y3 + q2[3] * z3) / q2[0]  # w2 * w3 + y2 * y3 + z2 * z3 = 0
+
+        # 得到 q3
+        q3 = [w3, x3, y3, z3]
+        return q3
         
     def play_once(self):
         pass
