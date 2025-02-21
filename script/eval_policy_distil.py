@@ -26,7 +26,7 @@ parent_directory = os.path.dirname(current_file_path)
 def get_policy(checkpoint, output_dir, device):
     
     # load checkpoint
-    payload = torch.load(open('./policy/Depth_Distillation/'+checkpoint, 'rb'), pickle_module=dill)
+    payload = torch.load(open('./policy/Depth-Distillation/'+checkpoint, 'rb'), pickle_module=dill)
     cfg = payload['cfg']
     cls = hydra.utils.get_class(cfg._target_)
     workspace = cls(cfg, output_dir=output_dir)
@@ -114,7 +114,7 @@ def test_policy(task_name, Demo_class, args, dp: DP, st_seed, test_num=20):
         args['render_freq'] = render_freq
 
         Demo_class.setup_demo(now_ep_num=now_id, seed = now_seed, is_test = True, ** args)
-        Demo_class.apply_dp(dp, args)
+        Demo_class.apply_distil(dp, args)
 
         now_id += 1
         Demo_class.close()

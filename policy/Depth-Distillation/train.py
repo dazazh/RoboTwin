@@ -53,7 +53,7 @@ def main(cfg: OmegaConf):
     cfg.task.depth_shape = [1, head_camera_depth_cfg['h'], head_camera_depth_cfg['w']]
     cfg.task.shape_meta.obs.head_cam.shape = [4, head_camera_cfg['h'], head_camera_cfg['w']]
     cfg.task.shape_meta.obs.head_cam_depth.shape = [1, head_camera_depth_cfg['h'], head_camera_depth_cfg['w']]
-    print("asdasd")
+
     cls = hydra.utils.get_class(cfg._target_)
     workspace: BaseWorkspace = cls(cfg)
     print(cfg.task.dataset.zarr_path, cfg.task_name)

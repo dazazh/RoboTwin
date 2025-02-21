@@ -10,7 +10,7 @@ class RGBDNormalizer(nn.Module):
         self.rgb_normalizer = torchvision.transforms.Normalize(mean=mean, std=std)
 
     def __call__(self, sample):
-        print("sample:",sample.shape)
+        # print("sample:",sample.shape)
         # 假设sample的形状为[1, 4, H, W] (batch size = 1, 4 channels: RGB + Depth)
         
         # 提取RGB部分和深度部分
@@ -24,6 +24,6 @@ class RGBDNormalizer(nn.Module):
         # 注意: 需要将rgb和depth维度扩展回来以适应输出格式
         if sample.shape[0] == 1:
             rgb = rgb.unsqueeze(0)  # 重新加回批量维度
-        print("before:{},{}".format(rgb.shape,depth.shape))
-        print("after:",torch.cat((rgb, depth), dim=1).shape)
+        # print("before:{},{}".format(rgb.shape,depth.shape))
+        # print("after:",torch.cat((rgb, depth), dim=1).shape)
         return torch.cat((rgb, depth), dim=1)  # 拼接，dim=1表示拼接通道维度

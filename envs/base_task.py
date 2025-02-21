@@ -1259,6 +1259,30 @@ class Base_task(gym.Env):
             right_cam = right_cam
         )
 
+    def get_cam_obs_w_depth(self, observation: dict) -> dict:
+        head_cam = np.moveaxis(observation['observation']['head_camera']['rgb'], -1, 0) / 255
+        head_cam_depth = np.expand_dims(observation['observation']['head_camera']['depth'],axis=0)
+        head_cam = np.concatenate([head_cam,head_cam_depth],axis=0)
+
+        front_cam = np.moveaxis(observation['observation']['front_camera']['rgb'], -1, 0) / 255
+        front_cam_depth = np.expand_dims(observation['observation']['front_camera']['depth'],axis=0)
+        front_cam = np.concatenate([front_cam,front_cam_depth],axis=0)
+
+        left_cam = np.moveaxis(observation['observation']['left_camera']['rgb'], -1, 0) / 255
+        left_cam_depth = np.expand_dims(observation['observation']['left_camera']['depth'],axis=0)
+        left_cam = np.concatenate([left_cam,left_cam_depth],axis=0)
+
+        right_cam = np.moveaxis(observation['observation']['right_camera']['rgb'], -1, 0) / 255
+        right_cam_depth = np.expand_dims(observation['observation']['right_camera']['depth'],axis=0)
+        right_cam = np.concatenate([right_cam,right_cam_depth],axis=0)
+
+        return dict(
+            head_cam = head_cam,
+            front_cam = front_cam,
+            left_cam = left_cam,
+            right_cam = right_cam
+        )
+
     def apply_dp(self, model, args):
         cnt = 0
         self.test_num += 1
@@ -1746,6 +1770,194 @@ class Base_task(gym.Env):
 
     def pre_move(self):
         pass
+
+    def apply_distil(self, model, args):
+        cnt = 0
+        self.test_num += 1
+
+        eval_video_log = args['eval_video_log']
+        video_size = str(args['head_camera_w']) + 'x' + str(args['head_camera_h'])
+        save_dir = 'dp/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
+
+        if eval_video_log:
+            import subprocess
+            from pathlib import Path
+            save_dir = Path('eval_video') / save_dir
+            save_dir.mkdir(parents=True, exist_ok=True)
+            ffmpeg = subprocess.Popen([
+                'ffmpeg', '-y',
+                '-f', 'rawvideo',
+                '-pixel_format', 'rgb24',
+                '-video_size', video_size,
+                '-framerate', '10',
+                '-i', '-',
+                '-pix_fmt', 'yuv420p',
+                '-vcodec', 'libx264',
+                '-crf', '23',
+                f'{save_dir}/{self.test_num}.mp4'
+            ], stdin=subprocess.PIPE)
+
+        success_flag = False
+        self._update_render()
+        if self.render_freq:
+            self.viewer.render()
+        
+        self.actor_pose = True
+
+        observation = self.get_obs()
+        obs = self.get_cam_obs_w_depth(observation)
+
+        obs['agent_pos'] = observation['joint_action']
+        model.update_obs(obs)
+
+        if eval_video_log:
+            ffmpeg.stdin.write(observation['observation']['head_camera']['rgb'].tobytes())
+
+        while cnt < self.step_lim:
+            actions = model.get_action()
+            obs = model.get_last_obs()
+            left_arm_actions , left_gripper , left_current_qpos, left_path = [], [], [], []
+            right_arm_actions , right_gripper , right_current_qpos, right_path = [], [], [], []
+            if self.dual_arm:
+                left_arm_actions,left_gripper = actions[:, :6],actions[:, 6]
+                right_arm_actions,right_gripper = actions[:, 7:13],actions[:, 13]
+                left_current_qpos, right_current_qpos = obs['agent_pos'][:6], obs['agent_pos'][7:13]
+            else:
+                right_arm_actions,right_gripper = actions[:, :6],actions[:, 6]
+                right_current_qpos = obs['agent_pos'][:6]
+            
+            if self.dual_arm:
+                left_path = np.vstack((left_current_qpos, left_arm_actions))
+            right_path = np.vstack((right_current_qpos, right_arm_actions))
+
+
+            topp_left_flag, topp_right_flag = True, True
+            try:
+                times, left_pos, left_vel, acc, duration = self.left_planner.TOPP(left_path, 1/250, verbose=True)
+                left_result = dict()
+                left_result['position'], left_result['velocity'] = left_pos, left_vel
+                left_n_step = left_result["position"].shape[0]
+                left_gripper = np.linspace(left_gripper[0], left_gripper[-1], left_n_step)
+            except:
+                topp_left_flag = False
+                left_n_step = 1
+            
+            if left_n_step == 0 or (not self.dual_arm):
+                topp_left_flag = False
+                left_n_step = 1
+
+            try:
+                times, right_pos, right_vel, acc, duration = self.right_planner.TOPP(right_path, 1/250, verbose=True)            
+                right_result = dict()
+                right_result['position'], right_result['velocity'] = right_pos, right_vel
+                right_n_step = right_result["position"].shape[0]
+                right_gripper = np.linspace(right_gripper[0], right_gripper[-1], right_n_step)
+            except:
+                topp_right_flag = False
+                right_n_step = 1
+            
+            if right_n_step == 0:
+                topp_right_flag = False
+                right_n_step = 1
+            
+            cnt += actions.shape[0]
+            
+            n_step = max(left_n_step, right_n_step)
+
+            obs_update_freq = n_step // actions.shape[0]
+
+            now_left_id = 0 if topp_left_flag else 1e9
+            now_right_id = 0 if topp_right_flag else 1e9
+            i = 0
+            
+            while now_left_id < left_n_step or now_right_id < right_n_step:
+                qf = self.robot.compute_passive_force(
+                    gravity=True, coriolis_and_centrifugal=True
+                )
+                self.robot.set_qf(qf)
+                if topp_left_flag and now_left_id < left_n_step and now_left_id / left_n_step <= now_right_id / right_n_step:
+                    for j in range(len(self.left_arm_joint_id)):
+                        left_j = self.left_arm_joint_id[j]
+                        self.active_joints[left_j].set_drive_target(left_result["position"][now_left_id][j])
+                        self.active_joints[left_j].set_drive_velocity_target(left_result["velocity"][now_left_id][j])
+                    if not self.fix_gripper:
+                        for joint in self.active_joints[34:36]:
+                            # joint.set_drive_target(left_result["position"][i][6])
+                            joint.set_drive_target(left_gripper[now_left_id])
+                            joint.set_drive_velocity_target(0.05)
+                            self.left_gripper_val = left_gripper[now_left_id]
+
+                    now_left_id +=1
+                    
+                if topp_right_flag and now_right_id < right_n_step and now_right_id / right_n_step <= now_left_id / left_n_step:
+                    for j in range(len(self.right_arm_joint_id)):
+                        right_j = self.right_arm_joint_id[j]
+                        self.active_joints[right_j].set_drive_target(right_result["position"][now_right_id][j])
+                        self.active_joints[right_j].set_drive_velocity_target(right_result["velocity"][now_right_id][j])
+                    if not self.fix_gripper:
+                        for joint in self.active_joints[36:38]:
+                            # joint.set_drive_target(right_result["position"][i][6])
+                            joint.set_drive_target(right_gripper[now_right_id])
+                            joint.set_drive_velocity_target(0.05)
+                            self.right_gripper_val = right_gripper[now_right_id]
+
+                    now_right_id +=1
+                
+                self.scene.step()
+                self._update_render()
+
+                if i != 0 and i % obs_update_freq == 0:
+                    observation = self.get_obs()
+                    obs = self.get_cam_obs_w_depth(observation)
+                    obs['agent_pos'] = observation['joint_action']
+                    
+                    model.update_obs(obs)
+                    self._take_picture()
+
+                if i % 5 == 0:
+                    self._update_render()
+                    if self.render_freq and i % self.render_freq == 0:
+                        self.viewer.render()
+                
+                i+=1
+                if self.check_success():
+                    success_flag = True
+                    break
+
+                if self.actor_pose == False:
+                    break
+            
+            self. _update_render()
+            if eval_video_log:
+                ffmpeg.stdin.write(observation['observation']['head_camera']['rgb'].tobytes())
+            if self.render_freq:
+                self.viewer.render()
+            
+            self._take_picture()
+
+            print(f'step: {cnt} / {self.step_lim}', end='\r')
+
+            if success_flag:
+                print("\nsuccess!")
+                self.suc +=1
+
+                if eval_video_log:
+                    ffmpeg.stdin.close()
+                    ffmpeg.wait()
+                    del ffmpeg
+
+                return
+            
+            if self.actor_pose == False:
+                break
+            continue
+
+        print("\nfail!")
+
+        if eval_video_log:
+            ffmpeg.stdin.close()
+            ffmpeg.wait()
+            del ffmpeg
 
     # ================= For Your Policy Deployment =================
     def apply_policy_demo(self, model):

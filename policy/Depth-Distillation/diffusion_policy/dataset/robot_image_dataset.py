@@ -131,7 +131,7 @@ class RobotImageDataset(BaseImageDataset):
         head_depth = samples['head_depth'].to(device, non_blocking=True)
         head_depth = torch.unsqueeze(head_depth, dim=2)
         head_cam = torch.cat([head_cam, head_depth], dim=2)
-        print(head_cam.shape)
+        # print(head_cam.shape)
         # front_cam = samples['front_camera'].to(device, non_blocking=True) / 255.0
         # left_cam = samples['left_camera'].to(device, non_blocking=True) / 255.0
         # right_cam = samples['right_camera'].to(device, non_blocking=True) / 255.0
