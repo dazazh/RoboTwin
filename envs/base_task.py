@@ -19,6 +19,8 @@ from collections import deque
 import cv2
 import torch
 import yaml
+from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig, depth_processor
+from sapien.core import Pose
 
 class Base_task(gym.Env):
 
@@ -84,6 +86,8 @@ class Base_task(gym.Env):
         self.plan_success = True
         self.step_lim = None
         self.fix_gripper = False
+        self.sensor_config = StereoDepthSensorConfig()
+
         self.setup_scene()
 
         self.left_js = None
@@ -286,6 +290,8 @@ class Base_task(gym.Env):
             near=near,
             far=far,
         )
+
+        self.left_sensor = StereoDepthSensor(self.sensor_config, self.all_links[46].entity)
 
         self.right_camera = self.scene.add_camera(
             name="right_camera",
@@ -704,6 +710,12 @@ class Base_task(gym.Env):
         rgba_img = (rgba * 255).clip(0, 255).astype("uint8")
         return rgba_img
     
+    # Get Sensor RGBA
+    def _get_sensor_rgba(self, sensor):
+        rgba = sensor.get_rgba_cuda().torch().cpu().numpy()
+        rgba_img = (rgba * 255).clip(0, 255).astype("uint8")
+        return rgba_img
+    
     # Get Camera Segmentation
     def _get_camera_segmentation(self, camera,level = "mesh"):
         # visual_id is the unique id of each visual shape
@@ -722,7 +734,13 @@ class Base_task(gym.Env):
     def _get_camera_depth(self, camera):
         position = camera.get_picture("Position")
         depth = -position[..., 2]
-        depth_image = (depth * 1000.0).astype(np.float64)
+        depth_image = (depth * 100000.0).astype(np.float64)
+        return depth_image
+    
+    # Get Sensor Depth
+    def _get_sensor_depth(self, sensor):
+        position = sensor.get_depth_cuda().torch().cpu().numpy()
+        depth_image = (position * 100000).astype(np.float64)
         return depth_image
     
     # Get Camera PointCloud
@@ -801,19 +819,48 @@ class Base_task(gym.Env):
         return endpose
     
 
-    def get_camera_config(self, camera_type):
-        import os
-        current_file_path = os.path.abspath(__file__)
-        parent_directory = os.path.dirname(current_file_path)
-        camera_config_path = os.path.join(parent_directory, '../task_config/_camera_config.yml')
+    def get_camera_config(self, camera):
+        config = {
+                    "D" : [ 0, 0, 0, 0, 0 ],
+                    "K" : camera.get_intrinsic_matrix().ravel().tolist(),
+                    "P" : np.vstack((camera.get_intrinsic_matrix(), [0,0,0])).ravel().tolist(),
+                    "R" : [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ],
+                    "binning_x" : 0,
+                    "binning_y" : 0,
+                    "distortion_model" : "plumb_bob",
+                    "height" : camera.get_height(),
+                    "parent_frame" : 
+                    {
+                        "pitch" : 0,
+                        "roll" : 1.57,
+                        "x" : 0,
+                        "y" : 0,
+                        "yaw" : 1.57,
+                        "z" : 0
+                    },
+                    "roi" : 
+                    {
+                        "do_rectify" : 0,
+                        "height" : 0,
+                        "width" : 0,
+                        "x_offset" : 0,
+                        "y_offset" : 0
+                    },
+                    "width" : camera.get_width()
+                }
+        return config    
+        # import os
+        # current_file_path = os.path.abspath(__file__)
+        # parent_directory = os.path.dirname(current_file_path)
+        # camera_config_path = os.path.join(parent_directory, '../task_config/_camera_config.yml')
 
-        assert os.path.isfile(camera_config_path), "task config file is missing"
+        # assert os.path.isfile(camera_config_path), "task config file is missing"
 
-        with open(camera_config_path, 'r', encoding='utf-8') as f:
-            camera_args = yaml.load(f.read(), Loader=yaml.FullLoader)
+        # with open(camera_config_path, 'r', encoding='utf-8') as f:
+        #     camera_args = yaml.load(f.read(), Loader=yaml.FullLoader)
 
-        assert camera_type in camera_args, f'camera {camera_type} is not defined'
-        return camera_args[camera_type]
+        # assert camera_type in camera_args, f'camera {camera_type} is not defined'
+        # return camera_args[camera_type]
     
     def is_left_gripper_open(self):
         return self.active_joints[34].get_drive_target()[0] > 0.04
@@ -844,6 +891,8 @@ class Base_task(gym.Env):
         self.head_camera.take_picture()
         self.observer_camera.take_picture()
         self.front_camera.take_picture()
+        self.left_sensor.take_picture()
+        self.left_sensor.compute_depth()
         
         if self.PCD_INDEX==0:
             self.file_path ={
@@ -957,6 +1006,7 @@ class Base_task(gym.Env):
             front_rgba = self._get_camera_rgba(self.front_camera)
             head_rgba = self._get_camera_rgba(self.head_camera)
             left_rgba = self._get_camera_rgba(self.left_camera)
+            left_rgb_from_sensor = self._get_sensor_rgba(self.left_sensor)
             right_rgba = self._get_camera_rgba(self.right_camera)
 
             if self.save_type.get('raw_data', True):
@@ -965,7 +1015,7 @@ class Base_task(gym.Env):
                     save_img(self.file_path["observer_color"]+f"{self.PCD_INDEX}.png",observer_rgba)
                 save_img(self.file_path["t_color"]+f"{self.PCD_INDEX}.png",head_rgba)
                 save_img(self.file_path["f_color"]+f"{self.PCD_INDEX}.png",front_rgba)
-                save_img(self.file_path["l_color"]+f"{self.PCD_INDEX}.png",left_rgba)
+                save_img(self.file_path["l_color"]+f"{self.PCD_INDEX}.png",left_rgb_from_sensor)
                 save_img(self.file_path["r_color"]+f"{self.PCD_INDEX}.png",right_rgba)
 
             if self.save_type.get('pkl' , True):
@@ -1019,12 +1069,16 @@ class Base_task(gym.Env):
             front_depth = self._get_camera_depth(self.front_camera)
             head_depth = self._get_camera_depth(self.head_camera)
             left_depth = self._get_camera_depth(self.left_camera)
+            left_depth_from_sensor = self._get_sensor_depth(self.left_sensor)
             right_depth = self._get_camera_depth(self.right_camera)
+
+            # left_depth_from_sensor = self._get_sensor_depth(self.left_sensor)
             
             if self.save_type.get('raw_data', True):
                 save_img(self.file_path["t_depth"]+f"{self.PCD_INDEX}.png", head_depth.astype(np.uint16))
                 save_img(self.file_path["f_depth"]+f"{self.PCD_INDEX}.png", front_depth.astype(np.uint16))
                 save_img(self.file_path["l_depth"]+f"{self.PCD_INDEX}.png", left_depth.astype(np.uint16))
+                save_img(self.file_path["l_depth"]+f"{self.PCD_INDEX}_from_sensor.png", left_depth_from_sensor.astype(np.uint16))
                 save_img(self.file_path["r_depth"]+f"{self.PCD_INDEX}.png", right_depth.astype(np.uint16))
             if self.save_type.get('pkl' , True):
                 pkl_dic["observation"]["head_camera"]["depth"] = head_depth
