@@ -7,10 +7,11 @@ policy/3D-Diffusion-Policy/3D-Diffusion-Policy/checkpoints/
 result/
 third_party/
 result_dp3/
-task_config/seeds/*.txt
+# task_config/seeds/*.txt
 run_all_task.sh
 *.zip
 *.tar
+video/*
 
 # Code Generation
 robotwin.py

@@ -31,8 +31,8 @@ def video_generation(image_folder, output_video):
 
 if __name__ == '__main__':
     # 设置图片所在目录和输出视频的路径
-    image_folder = '/home/robot4chem/robot/RoboTwin/data/column_insert_WBCD_D435/episode0/camera/color/'  # 替换为你的图片文件夹路径
-    output_video = '/home/robot4chem/robot/RoboTwin/video/column_insert_WBCD/'  # 输出视频文件名
+    image_folder = '/home/robot4chem/robot/RoboTwin/data/tube_grasp_WBCD_D435/episode0/camera/color/'  # 替换为你的图片文件夹路径
+    output_video = '/home/robot4chem/robot/RoboTwin/video/tube_grasp_WBCD/'  # 输出视频文件名
     positions = ['front','head','left','right','observer']
     for position in positions:
         video_generation(os.path.join(image_folder,position), os.path.join(output_video,position+'.mp4'))
