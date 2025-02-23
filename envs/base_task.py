@@ -12,6 +12,7 @@ import open3d as o3d
 import json
 import transforms3d as t3d
 from .utils import fps
+from .utils.sensor_config import SensorConfig
 from collections import OrderedDict
 from .utils import *
 import collections
@@ -19,7 +20,7 @@ from collections import deque
 import cv2
 import torch
 import yaml
-from sapien.sensor import StereoDepthSensor, StereoDepthSensorConfig, depth_processor
+from sapien.sensor import StereoDepthSensor, depth_processor
 from sapien.core import Pose
 
 class Base_task(gym.Env):
@@ -86,7 +87,7 @@ class Base_task(gym.Env):
         self.plan_success = True
         self.step_lim = None
         self.fix_gripper = False
-        self.sensor_config = StereoDepthSensorConfig()
+        self.head_sensor_config = SensorConfig()
 
         self.setup_scene()
 
@@ -291,8 +292,6 @@ class Base_task(gym.Env):
             far=far,
         )
 
-        self.left_sensor = StereoDepthSensor(self.sensor_config, self.all_links[46].entity)
-
         self.right_camera = self.scene.add_camera(
             name="right_camera",
             width=self.wrist_camera_w,
@@ -328,6 +327,8 @@ class Base_task(gym.Env):
             near=near,
             far=far,
         )
+        self.head_sensor_config.rgb_intrinsic = self.head_camera.get_intrinsic_matrix()
+        self.head_sensor = StereoDepthSensor(self.head_sensor_config, self.head_camera.entity)
 
         self.front_camera.entity.set_pose(sapien.Pose(front_mat44))
         self.head_camera.entity.set_pose(sapien.Pose(head_mat44))
@@ -782,6 +783,10 @@ class Base_task(gym.Env):
             points_color_np = points_color_np[index,:]
 
         return np.hstack((points_world_np, points_color_np))
+    
+    def _get_sensor_pcd(self, sensor):
+        point_cloud = sensor.get_pointcloud_cuda(with_rgb=True).torch().cpu().numpy()
+        return point_cloud
 
     def arr2pcd(self,point_arr,colors_arr = None):
         point_cloud = o3d.geometry.PointCloud()
@@ -891,8 +896,8 @@ class Base_task(gym.Env):
         self.head_camera.take_picture()
         self.observer_camera.take_picture()
         self.front_camera.take_picture()
-        self.left_sensor.take_picture()
-        self.left_sensor.compute_depth()
+        self.head_sensor.take_picture()
+        self.head_sensor.compute_depth()
         
         if self.PCD_INDEX==0:
             self.file_path ={
@@ -1006,7 +1011,7 @@ class Base_task(gym.Env):
             front_rgba = self._get_camera_rgba(self.front_camera)
             head_rgba = self._get_camera_rgba(self.head_camera)
             left_rgba = self._get_camera_rgba(self.left_camera)
-            left_rgb_from_sensor = self._get_sensor_rgba(self.left_sensor)
+            head_rgba_from_sensor = self._get_sensor_rgba(self.head_sensor)
             right_rgba = self._get_camera_rgba(self.right_camera)
 
             if self.save_type.get('raw_data', True):
@@ -1015,7 +1020,8 @@ class Base_task(gym.Env):
                     save_img(self.file_path["observer_color"]+f"{self.PCD_INDEX}.png",observer_rgba)
                 save_img(self.file_path["t_color"]+f"{self.PCD_INDEX}.png",head_rgba)
                 save_img(self.file_path["f_color"]+f"{self.PCD_INDEX}.png",front_rgba)
-                save_img(self.file_path["l_color"]+f"{self.PCD_INDEX}.png",left_rgb_from_sensor)
+                save_img(self.file_path["l_color"]+f"{self.PCD_INDEX}.png",left_rgba)
+                save_img(self.file_path["t_color"]+f"{self.PCD_INDEX}_from_sensor.png",head_rgba_from_sensor)
                 save_img(self.file_path["r_color"]+f"{self.PCD_INDEX}.png",right_rgba)
 
             if self.save_type.get('pkl' , True):
@@ -1069,7 +1075,7 @@ class Base_task(gym.Env):
             front_depth = self._get_camera_depth(self.front_camera)
             head_depth = self._get_camera_depth(self.head_camera)
             left_depth = self._get_camera_depth(self.left_camera)
-            left_depth_from_sensor = self._get_sensor_depth(self.left_sensor)
+            head_depth_from_sensor = self._get_sensor_depth(self.head_sensor)
             right_depth = self._get_camera_depth(self.right_camera)
 
             # left_depth_from_sensor = self._get_sensor_depth(self.left_sensor)
@@ -1078,7 +1084,7 @@ class Base_task(gym.Env):
                 save_img(self.file_path["t_depth"]+f"{self.PCD_INDEX}.png", head_depth.astype(np.uint16))
                 save_img(self.file_path["f_depth"]+f"{self.PCD_INDEX}.png", front_depth.astype(np.uint16))
                 save_img(self.file_path["l_depth"]+f"{self.PCD_INDEX}.png", left_depth.astype(np.uint16))
-                save_img(self.file_path["l_depth"]+f"{self.PCD_INDEX}_from_sensor.png", left_depth_from_sensor.astype(np.uint16))
+                save_img(self.file_path["t_depth"]+f"{self.PCD_INDEX}_from_sensor.png", head_depth_from_sensor.astype(np.uint16))
                 save_img(self.file_path["r_depth"]+f"{self.PCD_INDEX}.png", right_depth.astype(np.uint16))
             if self.save_type.get('pkl' , True):
                 pkl_dic["observation"]["head_camera"]["depth"] = head_depth
@@ -1141,6 +1147,7 @@ class Base_task(gym.Env):
             front_pcd = self._get_camera_pcd(self.front_camera, point_num=0)
             left_pcd = self._get_camera_pcd(self.left_camera, point_num=0)
             right_pcd = self._get_camera_pcd(self.right_camera, point_num=0) 
+            head_pcd_from_sensor = self._get_sensor_pcd(self.head_sensor)
 
             # Merge pointcloud
             if self.data_type.get("conbine", False):
@@ -1162,6 +1169,10 @@ class Base_task(gym.Env):
                 o3d.io.write_point_cloud(self.file_path["r_pcd"] + f"{self.PCD_INDEX}.pcd", self.arr2pcd(right_pcd[:,:3], right_pcd[:,3:]))
                 ensure_dir(self.file_path["f_pcd"] + f"{self.PCD_INDEX}.pcd")
                 o3d.io.write_point_cloud(self.file_path["f_pcd"] + f"{self.PCD_INDEX}.pcd", self.arr2pcd(front_pcd[:,:3], front_pcd[:,3:]))
+
+                ensure_dir(self.file_path["t_pcd"] + f"{self.PCD_INDEX}_from_sensor.pcd")
+                o3d.io.write_point_cloud(self.file_path["t_pcd"] + f"{self.PCD_INDEX}_from_sensor.pcd", self.arr2pcd(head_pcd_from_sensor[:,:3], head_pcd_from_sensor[:,3:])) 
+
                 if self.data_type.get("conbine", False):
                     ensure_dir(self.file_path["conbine_pcd"] + f"{self.PCD_INDEX}.pcd")
                     o3d.io.write_point_cloud(self.file_path["conbine_pcd"] + f"{self.PCD_INDEX}.pcd", self.arr2pcd(pcd_array, conbine_pcd[index,3:]))
