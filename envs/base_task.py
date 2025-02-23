@@ -735,13 +735,13 @@ class Base_task(gym.Env):
     def _get_camera_depth(self, camera):
         position = camera.get_picture("Position")
         depth = -position[..., 2]
-        depth_image = (depth * 100000.0).astype(np.float64)
+        depth_image = (depth * 1000.0).astype(np.float64)
         return depth_image
     
     # Get Sensor Depth
     def _get_sensor_depth(self, sensor):
         position = sensor.get_depth_cuda().torch().cpu().numpy()
-        depth_image = (position * 100000).astype(np.float64)
+        depth_image = (position * 1000).astype(np.float64)
         return depth_image
     
     # Get Camera PointCloud
