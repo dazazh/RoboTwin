@@ -15,7 +15,7 @@ episode_num: 1
 save_freq: 15
 save_type:
   raw_data: true
-  pkl: false
+  pkl: true
 data_type:
   rgb: true
   observer: false

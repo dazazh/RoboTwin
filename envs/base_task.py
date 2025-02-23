@@ -1029,6 +1029,8 @@ class Base_task(gym.Env):
                 pkl_dic["observation"]["front_camera"]["rgb"] = front_rgba[:,:,:3]
                 pkl_dic["observation"]["left_camera"]["rgb"] = left_rgba[:,:,:3]
                 pkl_dic["observation"]["right_camera"]["rgb"] = right_rgba[:,:,:3]
+
+                pkl_dic["observation"]["head_camera"]["rgb_from_sensor"] = head_rgba_from_sensor[:,:,:3]
         # # ---------------------------------------------------------------------------- #
         # # mesh_segmentation
         # # ---------------------------------------------------------------------------- # 
@@ -1091,6 +1093,8 @@ class Base_task(gym.Env):
                 pkl_dic["observation"]["front_camera"]["depth"] = front_depth
                 pkl_dic["observation"]["left_camera"]["depth"] = left_depth
                 pkl_dic["observation"]["right_camera"]["depth"] = right_depth
+
+                pkl_dic["observation"]["head_camera"]["depth_from_sensor"] = head_depth_from_sensor
         # # ---------------------------------------------------------------------------- #
         # # endpose JSON
         # # ---------------------------------------------------------------------------- #
@@ -1154,6 +1158,7 @@ class Base_task(gym.Env):
                 conbine_pcd = np.vstack((head_pcd , left_pcd , right_pcd, front_pcd))
             else:
                 conbine_pcd = head_pcd
+                conbine_pcd_from_sensor = head_pcd_from_sensor
             
             pcd_array,index = conbine_pcd[:,:3], np.array(range(len(conbine_pcd)))
             if self.pcd_down_sample_num > 0:
@@ -1179,6 +1184,8 @@ class Base_task(gym.Env):
 
             if self.save_type.get('pkl' , True):
                 pkl_dic["pointcloud"] = conbine_pcd[index]
+                if self.data_type.get("conbine", False) == False:
+                    pkl_dic["pointcloud_from_sensor"] = conbine_pcd_from_sensor[index]
         #===========================================================#
         if self.save_type.get('pkl' , True):
             save_pkl(self.file_path["pkl"]+f"{self.PCD_INDEX}.pkl", pkl_dic)
@@ -1730,6 +1737,16 @@ class Base_task(gym.Env):
         local_target_matrix = np.asarray(actor_data['target_pose'])
         local_target_matrix[:3,3] *= actor_data['scale']
         return (actor_matrix @ local_target_matrix)[:3,3]
+    
+    def get_actor_contact_position(self, actor, actor_data, id = 0):
+        if type(actor) == list:
+            return actor
+        actor_matrix = actor.get_pose().to_transformation_matrix()
+        # if "model_type" in actor_data.keys() and actor_data["model_type"] == "urdf": actor_matrix[:3,:3] = self.URDF_MATRIX
+        local_contact_matrix = np.asarray(actor_data['contact_pose'][id])
+        local_contact_matrix[:3,3] *= actor_data['scale']
+        res_matrix = actor_matrix @ local_contact_matrix
+        return res_matrix[:3,3]
         
     def play_once(self):
         pass
