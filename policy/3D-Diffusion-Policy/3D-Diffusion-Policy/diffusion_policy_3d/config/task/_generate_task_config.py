@@ -50,6 +50,7 @@ names = [
     'pick_apple_messy',
     'put_apple_cabinet',
     'shoe_place',
+    'tube_grasp'
 ]
 
 output_dir = "./"

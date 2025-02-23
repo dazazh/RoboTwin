@@ -20,11 +20,12 @@ class RobotDataset(BaseDataset):
             val_ratio=0.0,
             max_train_episodes=None,
             task_name=None,
+            from_sensor=False,
             ):
         super().__init__()
         self.task_name = task_name
         self.replay_buffer = ReplayBuffer.copy_from_path(
-            zarr_path, keys=['state', 'action', 'point_cloud']) # 'img'
+            zarr_path, keys=['state', 'action', 'point_cloud', 'point_cloud_from_sensor']) # 'img'
         val_mask = get_val_mask(
             n_episodes=self.replay_buffer.n_episodes, 
             val_ratio=val_ratio,
@@ -44,6 +45,7 @@ class RobotDataset(BaseDataset):
         self.horizon = horizon
         self.pad_before = pad_before
         self.pad_after = pad_after
+        self.from_sensor = from_sensor
 
     def get_validation_dataset(self):
         val_set = copy.copy(self)
@@ -58,11 +60,18 @@ class RobotDataset(BaseDataset):
         return val_set
 
     def get_normalizer(self, mode='limits', **kwargs):
-        data = {
-            'action': self.replay_buffer['action'],
-            'agent_pos': self.replay_buffer['state'][...,:],
-            'point_cloud': self.replay_buffer['point_cloud'],
-        }
+        if self.from_sensor == False:
+            data = {
+                'action': self.replay_buffer['action'],
+                'agent_pos': self.replay_buffer['state'][...,:],
+                'point_cloud': self.replay_buffer['point_cloud'],
+            }
+        else:
+            data = {
+                'action': self.replay_buffer['action'],
+                'agent_pos': self.replay_buffer['state'][...,:],
+                'point_cloud': self.replay_buffer['point_cloud_from_sensor'],
+            }
         normalizer = LinearNormalizer()
         normalizer.fit(data=data, last_n_dims=1, mode=mode, **kwargs)
         return normalizer
@@ -72,8 +81,10 @@ class RobotDataset(BaseDataset):
 
     def _sample_to_data(self, sample):
         agent_pos = sample['state'][:,].astype(np.float32) # (agent_posx2, block_posex3)
-        point_cloud = sample['point_cloud'][:,].astype(np.float32) # (T, 1024, 6)
-
+        if self.from_sensor == False:
+            point_cloud = sample['point_cloud'][:,].astype(np.float32) # (T, 1024, 6)
+        else:
+            point_cloud = sample['point_cloud_from_sensor'][:,].astype(np.float32)
         data = {
             'obs': {
                 'point_cloud': point_cloud, # T, 1024, 6
