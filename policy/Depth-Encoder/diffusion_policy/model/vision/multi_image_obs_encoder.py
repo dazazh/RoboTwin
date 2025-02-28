@@ -8,11 +8,21 @@ from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
 
+class FeatureFusionMLP(nn.Module):
+    def __init__(self, feature_dim):
+        super(FeatureFusionMLP, self).__init__()
+        self.fc = nn.Linear(2 * feature_dim, feature_dim)
+
+    def forward(self, rgb_feat, depth_feat):
+        fused_feat = torch.cat([rgb_feat, depth_feat], dim=1)  # 在特征维度拼接
+        fused_feat = self.fc(fused_feat)  # 线性变换学习融合
+        return fused_feat
 
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
             shape_meta: dict,
             rgb_model: Union[nn.Module, Dict[str,nn.Module]],
+            depth_model: Union[nn.Module, Dict[str,nn.Module]],
             resize_shape: Union[Tuple[int,int], Dict[str,tuple], None]=None,
             crop_shape: Union[Tuple[int,int], Dict[str,tuple], None]=None,
             random_crop: bool=True,
@@ -35,11 +45,13 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         key_model_map = nn.ModuleDict()
         key_transform_map = nn.ModuleDict()
         key_shape_map = dict()
+        self.fusion_layer = FeatureFusionMLP()
 
         # handle sharing vision backbone
         if share_rgb_model:
             assert isinstance(rgb_model, nn.Module)
             key_model_map['rgb'] = rgb_model
+            key_model_map['depth'] = depth_model
 
         obs_shape_meta = shape_meta['obs']
         for key, attr in obs_shape_meta.items():
@@ -54,10 +66,12 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     if isinstance(rgb_model, dict):
                         # have provided model for each key
                         this_model = rgb_model[key]
+                        this_depth_model = depth_model[key]
                     else:
                         assert isinstance(rgb_model, nn.Module)
                         # have a copy of the rgb model
                         this_model = copy.deepcopy(rgb_model)
+                        this_depth_model = copy.deepcopy(depth_model)
                 
                 if this_model is not None:
                     if use_group_norm:
@@ -68,7 +82,15 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                                 num_groups=x.num_features//16, 
                                 num_channels=x.num_features)
                         )
+                        this_depth_model = replace_submodules(
+                            root_module=this_depth_model,
+                            predicate=lambda x: isinstance(x, nn.BatchNorm2d),
+                            func=lambda x: nn.GroupNorm(
+                                num_groups=x.num_features//16, 
+                                num_channels=x.num_features)
+                        )
                     key_model_map[key] = this_model
+                    key_model_map[key+'_depth'] = this_depth_model
                 
                 # configure resize
                 input_shape = shape
@@ -149,8 +171,10 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # (N*B,C,H,W)
             imgs = torch.cat(imgs, dim=0)
             # (N*B,D)
-            feature = self.key_model_map['rgb'](imgs)
+            rgb_feature = self.key_model_map['rgb'](imgs[:,:2,:,:])
+            depth_feature = self.key_model_map['depth'](imgs[:,2,:,:])
             # (N,B,D)
+            feature = self.fusion_layer(rgb_feature, depth_feature)
             feature = feature.reshape(-1,batch_size,*feature.shape[1:])
             # (B,N,D)
             feature = torch.moveaxis(feature,0,1)
@@ -169,7 +193,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
-                feature = self.key_model_map[key](img)
+                # (N*B,D)
+                rgb_feature = self.key_model_map['rgb'](imgs[:,:2,:,:])
+                depth_feature = self.key_model_map['depth'](imgs[:,2,:,:])
+                # (N,B,D)
+                feature = self.fusion_layer(rgb_feature, depth_feature)
                 features.append(feature)
         
         # process lowdim input

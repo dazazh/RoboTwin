@@ -37,7 +37,11 @@ policy:
     _target_: diffusion_policy.model.vision.multi_image_obs_encoder.MultiImageObsEncoder
     shape_meta: ${shape_meta}
     rgb_model:
-      _target_: diffusion_policy.model.vision.model_getter.get_resnet
+      _target_: diffusion_policy.model.vision.model_getter.get_resnet_3
+      name: resnet18
+      weights: null
+    depth_model:
+      _target_: diffusion_policy.model.vision.model_getter.get_resnet_1
       name: resnet18
       weights: null
     resize_shape: null
