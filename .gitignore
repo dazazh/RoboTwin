@@ -11,6 +11,8 @@ task_config/seeds/*.txt
 run_all_task.sh
 *.zip
 *.tar
+eval_video/*
+*.ipynb
 
 # Code Generation
 robotwin.py
