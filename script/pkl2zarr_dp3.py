@@ -19,7 +19,7 @@ def main():
     num = args.expert_data_num
     current_ep, num = 0, num
     head_camera_type = args.head_camera_type
-    load_dir = f'/media/robot4chem/T7/datasets/RoboTwin/{task_name}_{head_camera_type}_pkl'
+    load_dir = f'./data/{task_name}_{head_camera_type}_pkl'
     
     total_count = 0
 

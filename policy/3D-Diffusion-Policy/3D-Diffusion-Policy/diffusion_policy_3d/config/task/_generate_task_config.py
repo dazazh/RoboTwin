@@ -30,6 +30,7 @@ dataset:
   seed: 0
   val_ratio: 0.02
   max_train_episodes: null
+  from_sensor: True
 """
 
 names = [

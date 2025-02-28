@@ -1,9 +1,9 @@
 task_name: tube_grasp
 render_freq: 0
-eval_video_log: false
+eval_video_log: true
 use_seed: false
 collect_data: true
-save_path: /media/robot4chem/T7/datasets/RoboTwin/
+save_path: ./data
 dual_arm: true
 st_episode: 0
 head_camera_type: D435

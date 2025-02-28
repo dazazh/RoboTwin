@@ -11,14 +11,14 @@ wrist_camera_type: D435
 front_camera_type: D435
 pcd_crop: true
 pcd_down_sample_num: 1024
-episode_num: 1
+episode_num: 30
 save_freq: 15
 save_type:
   raw_data: true
   pkl: true
 data_type:
   rgb: true
-  observer: false
+  observer: true
   depth: true
   pointcloud: true
   endpose: true
