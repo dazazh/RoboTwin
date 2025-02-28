@@ -1777,7 +1777,7 @@ class Base_task(gym.Env):
 
         eval_video_log = args['eval_video_log']
         video_size = str(args['head_camera_w']) + 'x' + str(args['head_camera_h'])
-        save_dir = 'dp/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
+        save_dir = 'distil/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
 
         if eval_video_log:
             import subprocess

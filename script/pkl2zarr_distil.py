@@ -50,6 +50,15 @@ def main():
             # print(data['observation']['head_camera'].keys())
             head_img = data['observation']['head_camera']['rgb']
             head_depth = data['observation']['head_camera']['depth']
+            
+            # print(head_depth.shape)
+            min_value = np.min(head_depth)
+            max_value = np.max(head_depth)
+            # print(min_value)
+            # print(max_value)
+            head_depth = [(x - min_value) / (max_value - min_value) for x in head_depth]
+            # print(head_depth)
+
             action = data['endpose']
             joint_action = data['joint_action']
 

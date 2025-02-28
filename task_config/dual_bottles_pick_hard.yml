@@ -11,7 +11,7 @@ wrist_camera_type: D435
 front_camera_type: D435
 pcd_crop: true
 pcd_down_sample_num: 1024
-episode_num: 100
+episode_num: 30
 save_freq: 15
 save_type:
   raw_data: false

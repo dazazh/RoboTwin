@@ -43,7 +43,7 @@ policy:
     resize_shape: null
     crop_shape: null
     # constant center crop
-    random_crop: True
+    random_crop: False
     use_group_norm: True
     share_rgb_model: False
     imagenet_norm: True
