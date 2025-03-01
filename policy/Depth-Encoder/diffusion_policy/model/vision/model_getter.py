@@ -15,7 +15,7 @@ def get_resnet_1(name, weights=None, **kwargs):
     resnet.fc = torch.nn.Identity()
 
     conv1 = resnet.conv1
-    # 修改为支持4通道输入
+    # 修改为支持单通道输入
     new_conv1 = torch.nn.Conv2d(1, conv1.out_channels, kernel_size=conv1.kernel_size,
                                 stride=conv1.stride, padding=conv1.padding, bias=False)
     # 将修改后的卷积层替换原有的第一层卷积层

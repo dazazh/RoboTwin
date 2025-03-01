@@ -3,38 +3,15 @@ import copy
 import torch
 import torch.nn as nn
 import torchvision
-from diffusion_policy.model.vision.rgbd_normalizer import RGBDNormalizer
 from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
 
-class FeatureFusionMLP(nn.Module):
-    def __init__(self, feature_dim):
-        super(FeatureFusionMLP, self).__init__()
-        self.fc = nn.Linear(2 * feature_dim, feature_dim)
-
-    def forward(self, rgb_feat, depth_feat):
-        fused_feat = torch.cat([rgb_feat, depth_feat], dim=1)  # 在特征维度拼接
-        fused_feat = self.fc(fused_feat)  # 线性变换学习融合
-        return fused_feat
-    
-class FeatureFusionSoftmax(nn.Module):
-    def __init__(self):
-        super(FeatureFusionSoftmax, self).__init__()
-        # 初始化参数，logits 让 softmax 自动学习
-        self.weights = nn.Parameter(torch.tensor([0.5, 0.5])) 
-
-    def forward(self, rgb_feat, depth_feat):
-        # 通过 softmax 归一化权重
-        alpha, beta = torch.softmax(self.weights, dim=0)
-        fused_feat = alpha * rgb_feat + beta * depth_feat
-        return fused_feat
 
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
             shape_meta: dict,
             rgb_model: Union[nn.Module, Dict[str,nn.Module]],
-            depth_model: Union[nn.Module, Dict[str,nn.Module]],
             resize_shape: Union[Tuple[int,int], Dict[str,tuple], None]=None,
             crop_shape: Union[Tuple[int,int], Dict[str,tuple], None]=None,
             random_crop: bool=True,
@@ -57,13 +34,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         key_model_map = nn.ModuleDict()
         key_transform_map = nn.ModuleDict()
         key_shape_map = dict()
-        self.fusion_layer = FeatureFusionSoftmax()
 
         # handle sharing vision backbone
         if share_rgb_model:
             assert isinstance(rgb_model, nn.Module)
             key_model_map['rgb'] = rgb_model
-            key_model_map['depth'] = depth_model
 
         obs_shape_meta = shape_meta['obs']
         for key, attr in obs_shape_meta.items():
@@ -74,17 +49,14 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 rgb_keys.append(key)
                 # configure model for this key
                 this_model = None
-                this_depth_model = None
                 if not share_rgb_model:
                     if isinstance(rgb_model, dict):
                         # have provided model for each key
                         this_model = rgb_model[key]
-                        this_depth_model = depth_model[key]
                     else:
                         assert isinstance(rgb_model, nn.Module)
                         # have a copy of the rgb model
                         this_model = copy.deepcopy(rgb_model)
-                        this_depth_model = copy.deepcopy(depth_model)
                 
                 if this_model is not None:
                     if use_group_norm:
@@ -95,15 +67,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                                 num_groups=x.num_features//16, 
                                 num_channels=x.num_features)
                         )
-                        this_depth_model = replace_submodules(
-                            root_module=this_depth_model,
-                            predicate=lambda x: isinstance(x, nn.BatchNorm2d),
-                            func=lambda x: nn.GroupNorm(
-                                num_groups=x.num_features//16, 
-                                num_channels=x.num_features)
-                        )
                     key_model_map[key] = this_model
-                    key_model_map[key+'_depth'] = this_depth_model
                 
                 # configure resize
                 input_shape = shape
@@ -117,7 +81,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                         size=(h,w)
                     )
                     input_shape = (shape[0],h,w)
-                # ("input_shape",input_shape)
+
                 # configure randomizer
                 this_randomizer = nn.Identity()
                 if crop_shape is not None:
@@ -140,20 +104,15 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 # configure normalizer
                 this_normalizer = nn.Identity()
                 if imagenet_norm:
-                    # this_normalizer = torchvision.transforms.Normalize(
-                    #     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-                    this_normalizer = RGBDNormalizer(
+                    this_normalizer = torchvision.transforms.Normalize(
                         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                 
                 this_transform = nn.Sequential(this_resizer, this_randomizer, this_normalizer)
                 key_transform_map[key] = this_transform
             elif type == 'low_dim':
                 low_dim_keys.append(key)
-            elif type == 'depth':
-                continue
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
-            # print(key_shape_map)
         rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
 
@@ -178,16 +137,14 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
                 imgs.append(img)
             # (N*B,C,H,W)
             imgs = torch.cat(imgs, dim=0)
             # (N*B,D)
-            rgb_feature = self.key_model_map['rgb'](imgs[:,:3,:,:])
-            depth_feature = self.key_model_map['depth'](imgs[:,3,:,:].unsqueeze(1))
+            feature = self.key_model_map['rgb'](imgs)
             # (N,B,D)
-            feature = self.fusion_layer(rgb_feature, depth_feature)
             feature = feature.reshape(-1,batch_size,*feature.shape[1:])
             # (B,N,D)
             feature = torch.moveaxis(feature,0,1)
@@ -198,20 +155,13 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # run each rgb obs to independent models
             for key in self.rgb_keys:
                 img = obs_dict[key]
-                # print("img_shape:",img.shape)
-                # print(self.key_shape_map[key])
                 if batch_size is None:
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
-                # (B,C,H,W)
+                assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
-                # (B,D)
-                rgb_feature = self.key_model_map[key](img[:,:3,:,:])
-                depth_feature = self.key_model_map[key+'_depth'](img[:,3,:,:].unsqueeze(1))
-                # (B,D)
-                feature = self.fusion_layer(rgb_feature, depth_feature)
+                feature = self.key_model_map[key](img)
                 features.append(feature)
         
         # process lowdim input
@@ -221,7 +171,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 batch_size = data.shape[0]
             else:
                 assert batch_size == data.shape[0]
-            assert data.shape[1:] == torch.Size(self.key_shape_map[key])
+            assert data.shape[1:] == self.key_shape_map[key]
             features.append(data)
         
         # concatenate all features

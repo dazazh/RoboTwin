@@ -9,7 +9,6 @@ if __name__ == "__main__":
 
 import os
 import hydra
-import wandb
 import torch
 from omegaconf import OmegaConf
 import pathlib
@@ -59,10 +58,11 @@ class RobotWorkspace(BaseWorkspace):
     def run(self):
         cfg = copy.deepcopy(self.cfg)
         seed = cfg.training.seed
+        head_camera_type = cfg.head_camera_type
 
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = pathlib.Path("./checkpoints/tube_grasp_D435_300_0/450.ckpt")
+            lastest_ckpt_path = self.get_checkpoint_path()
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
@@ -109,20 +109,18 @@ class RobotWorkspace(BaseWorkspace):
         #     output_dir=self.output_dir)
         # assert isinstance(env_runner, BaseImageRunner)
         env_runner = None
-        
-        WANDB = False
+
         # configure logging
-        if WANDB:
-            wandb_run = wandb.init(
-                dir=str(self.output_dir),
-                config=OmegaConf.to_container(cfg, resolve=True),
-                **cfg.logging
-            )
-            wandb.config.update(
-                {
-                    "output_dir": self.output_dir,
-                }
-            )
+        # wandb_run = wandb.init(
+        #     dir=str(self.output_dir),
+        #     config=OmegaConf.to_container(cfg, resolve=True),
+        #     **cfg.logging
+        # )
+        # wandb.config.update(
+        #     {
+        #         "output_dir": self.output_dir,
+        #     }
+        # )
 
         # configure checkpoint
         topk_manager = TopKCheckpointManager(
@@ -198,8 +196,6 @@ class RobotWorkspace(BaseWorkspace):
                             # log of last step is combined with validation and rollout
                             json_logger.log(step_log)
                             self.global_step += 1
-                            if WANDB:
-                                wandb_run.log(step_log, step=self.global_step)
 
                         if (cfg.training.max_train_steps is not None) \
                             and batch_idx >= (cfg.training.max_train_steps-1):
