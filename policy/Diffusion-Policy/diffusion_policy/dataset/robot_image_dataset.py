@@ -25,6 +25,7 @@ class RobotImageDataset(BaseImageDataset):
             ):
         
         super().__init__()
+        print(zarr_path)
         self.replay_buffer = ReplayBuffer.copy_from_path(
             zarr_path,
             # keys=['head_camera', 'front_camera', 'left_camera', 'right_camera', 'state', 'action'],

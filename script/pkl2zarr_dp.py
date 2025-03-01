@@ -25,7 +25,7 @@ def main():
     
     total_count = 0
 
-    save_dir = f'./policy/Diffusion-Policy/data/{task_name}_{head_camera_type}_{num}.zarr'
+    save_dir = f'./policy/My-Policy/data/{task_name}_{head_camera_type}_{num}.zarr'
 
     if os.path.exists(save_dir):
         shutil.rmtree(save_dir)
