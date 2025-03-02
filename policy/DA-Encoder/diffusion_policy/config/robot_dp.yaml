@@ -40,7 +40,7 @@ policy:
       _target_: diffusion_policy.model.vision.model_getter.get_resnet_da
       name: resnet18
       weights: null
-    resize_shape: null
+    resize_shape: [518,518]
     crop_shape: null
     # constant center crop
     random_crop: True
@@ -73,14 +73,14 @@ ema:
   max_value: 0.9999
 
 dataloader:
-  batch_size: 128
+  batch_size: 8
   num_workers: 0
   shuffle: True
   pin_memory: True
   persistent_workers: False
 
 val_dataloader:
-  batch_size: 128
+  batch_size: 8
   num_workers: 0
   shuffle: False
   pin_memory: True

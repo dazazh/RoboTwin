@@ -55,5 +55,6 @@ python train.py --config-name=${config_name}.yaml \
                             logging.mode=${wandb_mode} \
                             head_camera_type=${head_camera_type} \
                             expert_data_num=${expert_data_num}
+                            # task.dataset.head_camera=${head_camera_type}
                             # checkpoint.save_ckpt=${save_ckpt}
                             # hydra.run.dir=${run_dir} \

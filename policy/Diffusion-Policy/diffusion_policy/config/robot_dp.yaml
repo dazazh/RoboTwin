@@ -97,11 +97,11 @@ training:
   device: "cuda:0"
   seed: 42
   debug: False
-  resume: True
+  resume: False
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
-  num_epochs: 300
+  num_epochs: 900
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
@@ -110,14 +110,15 @@ training:
   # training loop control
   # in epochs
   rollout_every: 50
-  checkpoint_every: 300
-  val_every: 1
+  checkpoint_every: 150
+  val_every: 25
   sample_every: 5
   # steps per epoch
   max_train_steps: null
   max_val_steps: null
   # misc
   tqdm_interval_sec: 1.0
+  latest_ckpt_path: /public/home/muyao/RoboTwin/policy/Diffusion-Policy/checkpoints/tube_grasp_D435_200_0/300.ckpt
 
 logging:
   project: diffusion_policy_debug
@@ -138,16 +139,16 @@ checkpoint:
   save_last_snapshot: False
 
 multi_run:
-  run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+  run_dir: data_opaque/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
 
 hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    dir: data_opaque/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
   sweep:
-    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    dir: data_opaque/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
     subdir: ${hydra.job.num}
 
 head_camera_type: null

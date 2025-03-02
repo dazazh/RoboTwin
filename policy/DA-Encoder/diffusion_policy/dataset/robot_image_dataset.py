@@ -20,7 +20,7 @@ class RobotImageDataset(BaseImageDataset):
             pad_after=0,
             seed=42,
             val_ratio=0.0,
-            batch_size=128,
+            batch_size=8,
             max_train_episodes=None
             ):
         
