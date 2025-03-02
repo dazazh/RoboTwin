@@ -6,7 +6,17 @@ import torchvision
 from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
+import argparse
+import cv2
+import numpy as np
+import os
+import torch
+import torch.nn.functional as F
+from torchvision.transforms import Compose
+from tqdm import tqdm
 
+from depth_anything.dpt import DepthAnything
+from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
 
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
@@ -103,11 +113,23 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                         )
                 # configure normalizer
                 this_normalizer = nn.Identity()
-                if imagenet_norm:
-                    this_normalizer = torchvision.transforms.Normalize(
-                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                # if imagenet_norm:
+                #     this_normalizer = torchvision.transforms.Normalize(
+                #         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                 
-                this_transform = nn.Sequential(this_resizer, this_randomizer, this_normalizer)
+                this_transform = Compose([
+                    Resize(
+                        width=518,
+                        height=518,
+                        resize_target=False,
+                        keep_aspect_ratio=True,
+                        ensure_multiple_of=14,
+                        resize_method='lower_bound',
+                        image_interpolation_method=cv2.INTER_CUBIC,
+                    ),
+                    NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    PrepareForNet(),
+                ])
                 key_transform_map[key] = this_transform
             elif type == 'low_dim':
                 low_dim_keys.append(key)
