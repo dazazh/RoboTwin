@@ -124,13 +124,13 @@ class RobotImageDataset(BaseImageDataset):
         else:
             raise ValueError(idx)
 
-    def postprocess(self, samples, device):
-        agent_pos = samples['state'].to(device, non_blocking=True)
-        head_cam = samples['head_camera'].to(device, non_blocking=True) / 255.0
-        front_cam = samples['front_camera'].to(device, non_blocking=True) / 255.0
-        left_cam = samples['left_camera'].to(device, non_blocking=True) / 255.0
-        right_cam = samples['right_camera'].to(device, non_blocking=True) / 255.0
-        action = samples['action'].to(device, non_blocking=True)
+    def postprocess(self, samples):
+        agent_pos = samples['state']
+        head_cam = samples['head_camera'] / 255.0
+        front_cam = samples['front_camera'] / 255.0
+        left_cam = samples['left_camera'] / 255.0
+        right_cam = samples['right_camera'] / 255.0
+        action = samples['action']
         return {
             'obs': {
                 'head_cam': head_cam, # B, T, 3, H, W

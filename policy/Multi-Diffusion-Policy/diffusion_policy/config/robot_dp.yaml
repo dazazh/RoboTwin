@@ -124,7 +124,7 @@ logging:
   project: diffusion_policy_debug
   resume: True
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}(para)_multi_view_dp
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null
