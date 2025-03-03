@@ -48,10 +48,17 @@ def main():
                 data = pickle.load(file)
             
             head_img = data['observation']['head_camera']['rgb']
+            front_img = data['observation']['front_camera']['rgb']
+            left_img = data['observation']['left_camera']['rgb']
+            right_img = data['observation']['right_camera']['rgb']
             action = data['endpose']
             joint_action = data['joint_action']
 
             head_camera_arrays.append(head_img)
+            front_camera_arrays.append(front_img)
+            left_camera_arrays.append(left_img)
+            right_camera_arrays.append(right_img)
+            
             action_arrays.append(action)
             state_arrays.append(joint_action)
             joint_action_arrays.append(joint_action)
@@ -68,16 +75,28 @@ def main():
     action_arrays = np.array(action_arrays)
     state_arrays = np.array(state_arrays)
     head_camera_arrays = np.array(head_camera_arrays)
+    front_camera_arrays = np.array(front_camera_arrays)
+    left_camera_arrays = np.array(left_camera_arrays)
+    right_camera_arrays = np.array(right_camera_arrays)
     joint_action_arrays = np.array(joint_action_arrays)
 
     head_camera_arrays = np.moveaxis(head_camera_arrays, -1, 1)  # NHWC -> NCHW
+    front_camera_arrays = np.moveaxis(front_camera_arrays, -1, 1)  # NHWC -> NCHW
+    left_camera_arrays = np.moveaxis(left_camera_arrays, -1, 1)  # NHWC -> NCHW
+    right_camera_arrays = np.moveaxis(right_camera_arrays, -1, 1)  # NHWC -> NCHW
 
     compressor = zarr.Blosc(cname='zstd', clevel=3, shuffle=1)
     action_chunk_size = (100, action_arrays.shape[1])
     state_chunk_size = (100, state_arrays.shape[1])
     joint_chunk_size = (100, joint_action_arrays.shape[1])
     head_camera_chunk_size = (100, *head_camera_arrays.shape[1:])
+    front_camera_chunk_size = (100, *front_camera_arrays.shape[1:])
+    left_camera_chunk_size = (100, *left_camera_arrays.shape[1:])
+    right_camera_chunk_size = (100, *right_camera_arrays.shape[1:])
     zarr_data.create_dataset('head_camera', data=head_camera_arrays, chunks=head_camera_chunk_size, overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('front_camera', data=front_camera_arrays, chunks=front_camera_chunk_size, overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('left_camera', data=left_camera_arrays, chunks=left_camera_chunk_size, overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('right_camera', data=right_camera_arrays, chunks=right_camera_chunk_size, overwrite=True, compressor=compressor)
     zarr_data.create_dataset('tcp_action', data=action_arrays, chunks=action_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('state', data=state_arrays, chunks=state_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('action', data=joint_action_arrays, chunks=joint_chunk_size, dtype='float32', overwrite=True, compressor=compressor)

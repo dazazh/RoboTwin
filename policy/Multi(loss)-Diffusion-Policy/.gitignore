@@ -1,0 +1,7 @@
+data/*
+checkpoints/*
+checkpoints_opaque/*
+checkpoints_transparent/*
+checkpoints_yellow/*
+data_yellow/*
+data_opaque/*

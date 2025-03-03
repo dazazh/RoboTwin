@@ -12,6 +12,7 @@ run_all_task.sh
 *.zip
 *.tar
 video/*
+eval_video/*
 
 # Code Generation
 robotwin.py
