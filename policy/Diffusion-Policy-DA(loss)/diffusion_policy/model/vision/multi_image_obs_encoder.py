@@ -8,7 +8,6 @@ from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
 
 
-
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
             shape_meta: dict,
@@ -71,31 +70,37 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     key_model_map[key] = this_model
                 
                 # configure resize
+                input_shape = shape
                 this_resizer = nn.Identity()
                 if resize_shape is not None:
+                    if isinstance(resize_shape, dict):
+                        h, w = resize_shape[key]
+                    else:
+                        h, w = resize_shape
                     this_resizer = torchvision.transforms.Resize(
-                        size=(518,686)
+                        size=(h,w)
                     )
+                    input_shape = (shape[0],h,w)
 
                 # configure randomizer
                 this_randomizer = nn.Identity()
-                # if crop_shape is not None:
-                #     if isinstance(crop_shape, dict):
-                #         h, w = crop_shape[key]
-                #     else:
-                #         h, w = crop_shape
-                #     if random_crop:
-                #         this_randomizer = CropRandomizer(
-                #             input_shape=input_shape,
-                #             crop_height=h,
-                #             crop_width=w,
-                #             num_crops=1,
-                #             pos_enc=False
-                #         )
-                #     else:
-                #         this_normalizer = torchvision.transforms.CenterCrop(
-                #             size=(h,w)
-                #         )
+                if crop_shape is not None:
+                    if isinstance(crop_shape, dict):
+                        h, w = crop_shape[key]
+                    else:
+                        h, w = crop_shape
+                    if random_crop:
+                        this_randomizer = CropRandomizer(
+                            input_shape=input_shape,
+                            crop_height=h,
+                            crop_width=w,
+                            num_crops=1,
+                            pos_enc=False
+                        )
+                    else:
+                        this_normalizer = torchvision.transforms.CenterCrop(
+                            size=(h,w)
+                        )
                 # configure normalizer
                 this_normalizer = nn.Identity()
                 if imagenet_norm:
@@ -156,9 +161,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
-                print(img.shape)
                 feature = self.key_model_map[key](img)
-                print(feature.shape)
                 features.append(feature)
         
         # process lowdim input

@@ -184,7 +184,7 @@ def get_resnet_da(name, weights=None, **kwargs):
     # )
     # return resnet_new
     print(da_encoder)
-    return da_encoder
+    return resnet
 
 def get_r3m(name, **kwargs):
     """
