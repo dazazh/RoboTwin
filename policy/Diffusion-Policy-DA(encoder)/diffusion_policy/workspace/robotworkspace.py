@@ -25,6 +25,8 @@ from diffusion_policy.common.json_logger import JsonLogger
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.model.diffusion.ema_model import EMAModel
 from diffusion_policy.model.common.lr_scheduler import get_scheduler
+from accelerate import Accelerator
+import wandb
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
@@ -39,6 +41,7 @@ class RobotWorkspace(BaseWorkspace):
         torch.manual_seed(seed)
         np.random.seed(seed)
         random.seed(seed)
+        print(cfg)
 
         # configure model
         self.model: DiffusionUnetImagePolicy = hydra.utils.instantiate(cfg.policy)
@@ -59,6 +62,7 @@ class RobotWorkspace(BaseWorkspace):
         cfg = copy.deepcopy(self.cfg)
         seed = cfg.training.seed
         head_camera_type = cfg.head_camera_type
+        accelerator = Accelerator()
 
         # resume training
         if cfg.training.resume:
@@ -110,17 +114,23 @@ class RobotWorkspace(BaseWorkspace):
         # assert isinstance(env_runner, BaseImageRunner)
         env_runner = None
 
+        train_dataloader, val_dataloader, self.model, self.optimizer, lr_scheduler, self.ema_model = accelerator.prepare(            
+            train_dataloader, val_dataloader, self.model, self.optimizer, lr_scheduler, self.ema_model        
+		)
+
         # configure logging
-        # wandb_run = wandb.init(
-        #     dir=str(self.output_dir),
-        #     config=OmegaConf.to_container(cfg, resolve=True),
-        #     **cfg.logging
-        # )
-        # wandb.config.update(
-        #     {
-        #         "output_dir": self.output_dir,
-        #     }
-        # )
+        WANDB = False
+        if WANDB and accelerator.is_main_process:
+            wandb_run = wandb.init(
+                dir=str(self.output_dir),
+                config=OmegaConf.to_container(cfg, resolve=True),
+                **cfg.logging
+            )
+            wandb.config.update(
+                {
+                    "output_dir": self.output_dir,
+                }
+            )
 
         # configure checkpoint
         topk_manager = TopKCheckpointManager(
@@ -129,11 +139,11 @@ class RobotWorkspace(BaseWorkspace):
         )
 
         # device transfer
-        device = torch.device(cfg.training.device)
-        self.model.to(device)
-        if self.ema_model is not None:
-            self.ema_model.to(device)
-        optimizer_to(self.optimizer, device)
+        # device = torch.device(cfg.training.device)
+        # self.model.to(device)
+        # if self.ema_model is not None:
+        #     self.ema_model.to(device)
+        # optimizer_to(self.optimizer, device)
 
         # save batch for sampling
         train_sampling_batch = None
@@ -160,15 +170,15 @@ class RobotWorkspace(BaseWorkspace):
 
                 train_losses = list()
                 with tqdm.tqdm(train_dataloader, desc=f"Training epoch {self.epoch}", 
-                        leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
+                        leave=False, mininterval=cfg.training.tqdm_interval_sec, disable=not accelerator.is_local_main_process) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
-                        batch = dataset.postprocess(batch, device)
+                        batch = dataset.postprocess(batch)
                         if train_sampling_batch is None:
                             train_sampling_batch = batch
                         # compute loss  
-                        raw_loss = self.model.compute_loss(batch)
+                        raw_loss = self.model.module.compute_loss(batch)
                         loss = raw_loss / cfg.training.gradient_accumulate_every
-                        loss.backward()
+                        accelerator.backward(loss)
 
                         # step optimizer
                         if self.global_step % cfg.training.gradient_accumulate_every == 0:
@@ -178,7 +188,7 @@ class RobotWorkspace(BaseWorkspace):
                         
                         # update ema
                         if cfg.training.use_ema:
-                            ema.step(self.model)
+                            ema.step(self.model.module)
 
                         # logging
                         raw_loss_cpu = raw_loss.item()
@@ -223,10 +233,10 @@ class RobotWorkspace(BaseWorkspace):
                     with torch.no_grad():
                         val_losses = list()
                         with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
-                                leave=False, mininterval=cfg.training.tqdm_interval_sec) as tepoch:
+                                leave=False, mininterval=cfg.training.tqdm_interval_sec, disable=not accelerator.is_local_main_process) as tepoch:
                             for batch_idx, batch in enumerate(tepoch):
-                                batch = dataset.postprocess(batch, device)
-                                loss = self.model.compute_loss(batch)
+                                batch = dataset.postprocess(batch)
+                                loss = self.model.module.compute_loss(batch)
                                 val_losses.append(loss)
                                 if (cfg.training.max_val_steps is not None) \
                                     and batch_idx >= (cfg.training.max_val_steps-1):
@@ -257,16 +267,21 @@ class RobotWorkspace(BaseWorkspace):
                 
                 # checkpoint
                 if ((self.epoch + 1) % cfg.training.checkpoint_every) == 0:
+                    accelerator.wait_for_everyone()
                     # checkpointing
-                    save_name = pathlib.Path(self.cfg.task.dataset.zarr_path).stem
-                    self.save_checkpoint(f'checkpoints/{save_name}_{seed}/{self.epoch + 1}.ckpt') # TODO
-                
+                    if accelerator.is_main_process:
+                        save_name = pathlib.Path(self.cfg.task.dataset.zarr_path).stem
+                        self.save_checkpoint(f'checkpoints/{save_name}_{seed}/{self.epoch + 1}.ckpt') # TODO
+                    accelerator.wait_for_everyone()
+
                 # ========= eval end for this epoch ==========
                 policy.train()
 
                 # end of epoch
                 # log of last step is combined with validation and rollout
                 json_logger.log(step_log)
+                if WANDB and accelerator.is_main_process:
+                    wandb_run.log(step_log, step=self.global_step)
                 self.global_step += 1
                 self.epoch += 1
 

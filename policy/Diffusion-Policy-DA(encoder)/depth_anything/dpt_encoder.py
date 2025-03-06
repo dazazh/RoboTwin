@@ -2,7 +2,6 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
 from depth_anything.blocks import FeatureFusionBlock, _make_scratch
 
 class DPT_DINOv2_Encoder(nn.Module):
@@ -13,7 +12,7 @@ class DPT_DINOv2_Encoder(nn.Module):
 
         # ✅ 加载 DINOv2 预训练模型（使用已有 checkpoint）
         if localhub:
-            self.pretrained = torch.hub.load('./torchhub/facebookresearch_dinov2_main', 
+            self.pretrained = torch.hub.load('/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(encoder)/torchhub/facebookresearch_dinov2_main', 
                                              f'dinov2_{encoder}14', 
                                              source='local', 
                                              pretrained=False)

@@ -11,4 +11,4 @@ export HYDRA_FULL_ERROR=1
 export CUDA_VISIBLE_DEVICES=${gpu_id}
 
 cd ../..
-python ./script/eval_policy_dp.py "$task_name" "$head_camera_type" "$expert_data_num" "$checkpoint_num" "$seed"
+python ./script/eval_policy_dp_da_encoder.py "$task_name" "$head_camera_type" "$expert_data_num" "$checkpoint_num" "$seed"
