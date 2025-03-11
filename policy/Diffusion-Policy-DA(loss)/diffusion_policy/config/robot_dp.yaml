@@ -40,10 +40,12 @@ policy:
       _target_: diffusion_policy.model.vision.model_getter.get_resnet
       name: resnet18
       weights: null
+    # dino_encoder:
+    #  _target_: depth_anything.dpt.DepthAnything
     dino_encoder:
-      _target_: depth_anything.dpt_encoder.DPT_DINOv2_Encoder
-      encoder: 'vits'
-      localhub: True
+      _target_: depth_anything.dpt.DepthAnything.from_pretrained
+      pretrained_model_name_or_path: "LiheYoung/depth_anything_vits14"
+
     resize_shape: [350,350]
     crop_shape: null
     # constant center crop
@@ -77,14 +79,14 @@ ema:
   max_value: 0.9999
 
 dataloader:
-  batch_size: 128
+  batch_size: 64
   num_workers: 0
   shuffle: True
   pin_memory: True
   persistent_workers: False
 
 val_dataloader:
-  batch_size: 128
+  batch_size:  64
   num_workers: 0
   shuffle: False
   pin_memory: True
@@ -105,7 +107,7 @@ training:
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
-  num_epochs: 600
+  num_epochs: 900
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
@@ -127,7 +129,7 @@ logging:
   project: diffusion_policy_debug
   resume: True
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}_da-encoder_fc-project_8para
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}_da-loss_fc-project_4para
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null

@@ -40,9 +40,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         key_transform_map = nn.ModuleDict()
         key_shape_map = dict()
 
-        self.dino_encoder = DepthAnything.from_pretrained("LiheYoung/depth_anything_vits14")
+        # self.dino_encoder = dino_encoder.from_pretrained("LiheYoung/depth_anything_vits14")
         # self.dino_encoder = DPT_DINOv2_Encoder(encoder='vits', localhub=True).to(self.device)
-        # self.dino_encoder = dino_encoder
+        self.dino_encoder = dino_encoder
         checkpoint = torch.load("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(encoder)/diffusion_policy/depth_anything_vits14.pth", map_location="cpu",weights_only=True)
         self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
         # print(self.dino_encoder)
@@ -199,7 +199,6 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         # concatenate all features
         result = torch.cat(features, dim=-1)
         batch_depth = torch.cat(batch_depth,dim=0)
-        print(batch_depth.shape)
         return result,batch_depth
     
     @torch.no_grad()
@@ -214,6 +213,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 dtype=self.dtype,
                 device=self.device)
             example_obs_dict[key] = this_obs
-        example_output = self.forward(example_obs_dict)
+        example_output, _ = self.forward(example_obs_dict)
         output_shape = example_output.shape[1:]
+        # print(output_shape)
         return output_shape

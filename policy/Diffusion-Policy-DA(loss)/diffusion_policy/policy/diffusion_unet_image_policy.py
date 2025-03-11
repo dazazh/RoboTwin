@@ -56,7 +56,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             cond_predict_scale=cond_predict_scale
         )
 
-        self.lambda_1 = 0.1
+        self.lambda_depth = 0.1
         self.obs_encoder = obs_encoder
         self.model = model
         self.noise_scheduler = noise_scheduler
@@ -146,7 +146,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         if self.obs_as_global_cond:
             # condition through global feature
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
-            nobs_features = self.obs_encoder(this_nobs)
+            nobs_features, _ = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(B, -1)
             # empty data for action
@@ -155,7 +155,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         else:
             # condition through impainting
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
-            nobs_features = self.obs_encoder(this_nobs)
+            nobs_features, _ = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(B, To, -1)
             cond_data = torch.zeros(size=(B, T, Da+Do), device=device, dtype=dtype)
@@ -190,20 +190,26 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
     def set_normalizer(self, normalizer: LinearNormalizer):
         self.normalizer.load_state_dict(normalizer.state_dict())
 
-    def affine_normalize(depth_map):
+    def affine_normalize(self, batch_depth):
         """
-        对 GT 深度进行仿射不变归一化
-        :param depth_map: 原始深度图 (Tensor) [H, W]
-        :return: 归一化后的深度图 (Tensor) [H, W]
+        对 batch 维度的 GT 深度进行仿射不变归一化（逐样本计算，但优化运算效率）
+        :param batch_depth: 原始深度图 (Tensor) [B, H, W]
+        :return: 归一化后的深度图 (Tensor) [B, H, W]
         """
-        # 计算中位数 t(d)
-        t_d = torch.median(depth_map)
+        B, H, W = batch_depth.shape  # 获取 B帧(128*3) 维度信息
 
-        # 计算尺度因子 s(d)
-        s_d = torch.mean(torch.abs(depth_map - t_d))
+        # 计算中位数 t(d)（对每张图像单独计算）
+        t_d = torch.median(batch_depth.view(B, -1), dim=1, keepdim=True)[0]  # [B, 1]
+        
+        # 计算尺度因子 s(d)（对每张图像单独计算）
+        s_d = torch.mean(torch.abs(batch_depth.view(B, -1) - t_d), dim=1, keepdim=True)  # [B, 1]
+
+        # 维度对齐，方便广播
+        t_d = t_d.view(B, 1, 1)  # [B, 1, 1]
+        s_d = s_d.view(B, 1, 1)  # [B, 1, 1]
 
         # 归一化
-        normalized_depth = (depth_map - t_d) / s_d
+        normalized_depth = (batch_depth - t_d) / s_d  # [B, H, W]
 
         return normalized_depth
 
@@ -225,7 +231,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, 
                 lambda x: x[:,:self.n_obs_steps,...].reshape(-1,*x.shape[2:]))
-            nobs_features,depth_features = self.obs_encoder(this_nobs)
+            this_target_batch_depth = target_batch_depth[:,:self.n_obs_steps,...].reshape(-1,*target_batch_depth.shape[2:])
+            nobs_features,batch_depth = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
         else:
@@ -236,7 +243,6 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)
             cond_data = torch.cat([nactions, nobs_features], dim=-1)
             trajectory = cond_data.detach()
-
         # generate impainting mask
         condition_mask = self.mask_generator(trajectory.shape)
 
@@ -274,13 +280,19 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         loss = F.mse_loss(pred, target, reduction='none')
         loss = loss * loss_mask.type(loss.dtype)
         loss = reduce(loss, 'b ... -> b (...)', 'mean')
+
+        # print("this_target_batch_depth:",this_target_batch_depth.shape)
+        # print("this_nobs_rgb:",this_nobs['head_cam'].shape)
+        # print("batch_depth:",batch_depth.shape)
         
-        target_batch_depth = self.affine_normalize(target_batch_depth)
+        this_target_batch_depth = self.affine_normalize(this_target_batch_depth)
         batch_depth = self.affine_normalize(batch_depth)
-        depth_loss = F.mse_loss(batch_depth, target_batch_depth, reduction='none')
-        depth_loss = reduce(loss, 'b ... -> b (...)', 'mean')
+        depth_loss = F.mse_loss(batch_depth, this_target_batch_depth, reduction='none')
+        depth_loss = reduce(depth_loss, 'b ... -> b (...)', 'mean')
         
         loss = loss.mean()
-        depth_loss.mean()
-        loss = loss + self.lambda_1 * depth_loss
-        return loss
+        depth_loss = depth_loss.mean()
+        tot_loss = loss + self.lambda_depth * depth_loss
+        # print("loss:",loss)
+        # print("depth_loss:",depth_loss)
+        return tot_loss

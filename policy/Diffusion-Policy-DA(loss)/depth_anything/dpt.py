@@ -163,9 +163,17 @@ class DPT_DINOv2(nn.Module):
         
         # 冻结 `depth_head` 以减少显存消耗
         self.depth_head = DPTHead(1, dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken)
+        
         for param in self.depth_head.parameters():
             param.requires_grad = False  # 冻结 depth_head
+
+        for param in self.pretrained.parameters():
+            param.requires_grad = False
         
+        for name, param in self.pretrained.named_parameters():
+            if "lora" in name:
+                param.requires_grad = True
+
         # 线性降维层
         self.fc = nn.Linear(dim, features)
 
@@ -177,16 +185,16 @@ class DPT_DINOv2(nn.Module):
 
         # 允许 `pretrained` 进行微调
         depth_features = self.pretrained.get_intermediate_layers(x, 4, return_class_token=True)
-        
-        patch_h, patch_w = h // 14, w // 14
-
-        # 冻结 `depth_head` 计算
         with torch.no_grad():
+            patch_h, patch_w = h // 14, w // 14
+            # 冻结 `depth_head` 计算
             depth = self.depth_head(depth_features, patch_h, patch_w)
-            depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
+            # 这里不确定用(240, 320)还是(h, w)
+            depth = F.interpolate(depth, size=(240, 320), mode="bilinear", align_corners=True)
             depth = F.relu(depth)
 
         # 仅 `pretrained` 计算梯度
+        depth_features = [pair[0] for pair in depth_features]
         features = torch.stack(depth_features, dim=1)  # [batch_size, 4, 625, 384]
         features = features.mean(dim=2)  # [batch_size, 4, 384]
         features = self.fc(features)  # [batch_size, 4, 256]
