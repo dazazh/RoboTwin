@@ -1,4 +1,7 @@
 from typing import Dict
+import numpy as np
+from PIL import Image
+import torchvision.transforms as transforms
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -287,6 +290,19 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         
         this_target_batch_depth = self.affine_normalize(this_target_batch_depth)
         batch_depth = self.affine_normalize(batch_depth)
+        
+        # batch_depth_sample = batch_depth[0,:,:]
+        # batch_depth_sample = (batch_depth_sample).cpu().numpy().astype(np.uint8)
+        # image = Image.fromarray(batch_depth_sample, mode="L")
+        # image.save("depth_image.png")
+
+        # target_depth_sample = this_target_batch_depth[0,:,:]
+        # target_depth_sample = (target_depth_sample).cpu().numpy().astype(np.uint8)
+        # image = Image.fromarray(target_depth_sample, mode="L")
+        # image.save("target_image.png")
+        
+        # assert False
+        
         depth_loss = F.mse_loss(batch_depth, this_target_batch_depth, reduction='none')
         depth_loss = reduce(depth_loss, 'b ... -> b (...)', 'mean')
         

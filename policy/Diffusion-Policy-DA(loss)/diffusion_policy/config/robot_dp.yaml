@@ -103,7 +103,7 @@ training:
   device: "cuda:0"
   seed: 42
   debug: False
-  resume: True
+  resume: False
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
@@ -116,7 +116,7 @@ training:
   # training loop control
   # in epochs
   rollout_every: 50
-  checkpoint_every: 150
+  checkpoint_every: 50
   val_every: 25
   sample_every: 5
   # steps per epoch
