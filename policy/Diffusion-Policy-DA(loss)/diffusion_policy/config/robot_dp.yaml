@@ -49,7 +49,7 @@ policy:
     resize_shape: [350,350]
     crop_shape: null
     # constant center crop
-    random_crop: True
+    random_crop: False
     use_group_norm: True
     share_rgb_model: False
     imagenet_norm: True
@@ -79,14 +79,14 @@ ema:
   max_value: 0.9999
 
 dataloader:
-  batch_size: 64
+  batch_size: 16
   num_workers: 0
   shuffle: True
   pin_memory: True
   persistent_workers: False
 
 val_dataloader:
-  batch_size:  64
+  batch_size: 16
   num_workers: 0
   shuffle: False
   pin_memory: True

@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, reduce
+import matplotlib.pyplot as plt
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 from diffusion_policy.model.common.normalizer import LinearNormalizer
@@ -220,6 +221,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # normalize input
         assert 'valid_mask' not in batch
         nobs = self.normalizer.normalize(batch['obs'])
+        # 是否需要取消线性层
+        # nobs = self.normalizer.unnormalize(nobs)
         target_batch_depth = batch['target_head_depth']
         nactions = self.normalizer['action'].normalize(batch['action'])
         batch_size = nactions.shape[0]
@@ -288,27 +291,50 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # print("this_nobs_rgb:",this_nobs['head_cam'].shape)
         # print("batch_depth:",batch_depth.shape)
         
-        this_target_batch_depth = self.affine_normalize(this_target_batch_depth)
-        batch_depth = self.affine_normalize(batch_depth)
-        
-        # batch_depth_sample = batch_depth[0,:,:]
-        # batch_depth_sample = (batch_depth_sample).cpu().numpy().astype(np.uint8)
-        # image = Image.fromarray(batch_depth_sample, mode="L")
-        # image.save("depth_image.png")
+        this_target_batch_depth = self.affine_normalize(this_target_batch_depth).float()
+        batch_depth = self.affine_normalize(batch_depth).float()
 
-        # target_depth_sample = this_target_batch_depth[0,:,:]
-        # target_depth_sample = (target_depth_sample).cpu().numpy().astype(np.uint8)
-        # image = Image.fromarray(target_depth_sample, mode="L")
-        # image.save("target_image.png")
-        
-        # assert False
+        # 可视化输入rgb是否有问题+验证normalizer是否学到正确参数
+        # rgb_data = nobs['head_cam'][0,0,:,:,:]
+        # print("in_compute_loss_rgb_shape:",rgb_data.shape)
+        # image = np.transpose(rgb_data.cpu().numpy(), (1, 2, 0))  # 变换为 (H, W, C)
+        # plt.figure(figsize=(8, 6))
+        # plt.imshow(image) 
+        # plt.colorbar(label="rgb Value")  # 显示颜色条
+        # plt.axis("off")
+        # plt.savefig("./in_compute_loss_rgb_with_linear_normalizer.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        # plt.close()
+
+        # 检查depth anything的gt和模型输出
+        batch_depth_sample = batch_depth[0,:,:]
+        batch_depth_sample = (batch_depth_sample).detach().cpu().numpy()
+        vmin, vmax = np.percentile(batch_depth_sample, [5, 95])  # 去掉极端值以提升可视化效果
+        plt.figure(figsize=(8, 6))
+        plt.imshow(batch_depth_sample, cmap='viridis')  # 选择合适的颜色映射
+        plt.colorbar(label="Depth Value")  # 显示颜色条
+        plt.axis("off")
+        plt.savefig("./test_depth/batch_depth.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        plt.close()
+
+        target_depth_sample = this_target_batch_depth[0,:,:]
+        target_depth_sample = (target_depth_sample).detach().cpu().numpy()
+        vmin, vmax = np.percentile(target_depth_sample, [5, 95])  # 去掉极端值以提升可视化效果
+        plt.figure(figsize=(8, 6))
+        plt.imshow(target_depth_sample, cmap='viridis')  # 选择合适的颜色映射
+        plt.colorbar(label="Depth Value")  # 显示颜色条
+        plt.axis("off")
+        # 保存为 PNG 文件
+        plt.savefig("./test_depth/target_depth.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        plt.close()
+        assert False
         
         depth_loss = F.mse_loss(batch_depth, this_target_batch_depth, reduction='none')
         depth_loss = reduce(depth_loss, 'b ... -> b (...)', 'mean')
         
         loss = loss.mean()
         depth_loss = depth_loss.mean()
+        # print("depth_loss:",depth_loss)
         tot_loss = loss + self.lambda_depth * depth_loss
         # print("loss:",loss)
         # print("depth_loss:",depth_loss)
-        return tot_loss
+        return tot_loss,loss,depth_loss

@@ -11,12 +11,14 @@ import os
 import hydra
 import torch
 from omegaconf import OmegaConf
+import matplotlib.pyplot as plt
 import pathlib
 from torch.utils.data import DataLoader
 import copy
 import random
 import tqdm
 import numpy as np
+from peft import LoraConfig, get_peft_model
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
 from diffusion_policy.policy.diffusion_unet_image_policy import DiffusionUnetImagePolicy
 from diffusion_policy.dataset.base_dataset import BaseImageDataset
@@ -57,19 +59,34 @@ class RobotWorkspace(BaseWorkspace):
         # configure training state
         self.global_step = 0
         self.epoch = 0
+        self.scaler = torch.GradScaler()
 
     def run(self):
         cfg = copy.deepcopy(self.cfg)
         seed = cfg.training.seed
         head_camera_type = cfg.head_camera_type
         accelerator = Accelerator()
+        # if accelerator.is_main_process:
+        #     print("no lora:",self.model)
 
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = pathlib.Path("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/checkpoints/tube_grasp_D435_300_0/2.ckpt")
+            lastest_ckpt_path = pathlib.Path("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/checkpoints/tube_grasp_D435_300_0_depth_only/50.ckpt")
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
+
+        # lora_config = LoraConfig(
+        #     r=16,  # 低秩维度
+        #     lora_alpha=32,  # 缩放系数
+        #     lora_dropout=0.1,  # Dropout
+        #     target_modules=["qkv", "proj"],  # 只适配 Transformer 的注意力层
+        #     bias="none"
+        # )
+        # self.model.obs_encoder.dino_encoder.pretrained = get_peft_model(self.model.obs_encoder.dino_encoder.pretrained, lora_config)
+
+        # if accelerator.is_main_process:
+        #     print("lora:",self.model)
 
         # configure dataset
         dataset: BaseImageDataset
@@ -173,10 +190,24 @@ class RobotWorkspace(BaseWorkspace):
                         leave=False, mininterval=cfg.training.tqdm_interval_sec, disable=not accelerator.is_local_main_process) as tepoch:
                     for batch_idx, batch in enumerate(tepoch):
                         batch = dataset.postprocess(batch)
+
+                        # 检查原始输入图片
+                        # rgb_data = batch['obs']['head_cam'][0,0,:,:,:]
+                        # image = np.transpose(rgb_data.cpu().numpy(), (1, 2, 0))  # 变换为 (H, W, C)
+                        # print("image_shape:",image.shape)
+                        # plt.figure(figsize=(8, 6))
+                        # plt.imshow(image) 
+                        # plt.colorbar(label="rgb Value")  # 显示颜色条
+                        # plt.axis("off")
+
+                        # # 保存为 PNG 文件
+                        # plt.savefig("./after_rgb.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+                        # plt.close()
+
                         if train_sampling_batch is None:
                             train_sampling_batch = batch
                         # compute loss  
-                        raw_loss = self.model.module.compute_loss(batch)
+                        raw_loss,loss,depth_loss = self.model.module.compute_loss(batch)
                         loss = raw_loss / cfg.training.gradient_accumulate_every
                         accelerator.backward(loss)
 
@@ -192,10 +223,12 @@ class RobotWorkspace(BaseWorkspace):
 
                         # logging
                         raw_loss_cpu = raw_loss.item()
+                        depth_loss_cpu = depth_loss.item()
                         tepoch.set_postfix(loss=raw_loss_cpu, refresh=False)
                         train_losses.append(raw_loss_cpu)
                         step_log = {
                             'train_loss': raw_loss_cpu,
+                            'depth_loss': depth_loss_cpu,
                             'global_step': self.global_step,
                             'epoch': self.epoch,
                             'lr': lr_scheduler.get_last_lr()[0]
@@ -232,19 +265,23 @@ class RobotWorkspace(BaseWorkspace):
                 if (self.epoch % cfg.training.val_every) == 0:
                     with torch.no_grad():
                         val_losses = list()
+                        depth_val_losses = list()
                         with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
                                 leave=False, mininterval=cfg.training.tqdm_interval_sec, disable=not accelerator.is_local_main_process) as tepoch:
                             for batch_idx, batch in enumerate(tepoch):
                                 batch = dataset.postprocess(batch)
-                                loss = self.model.module.compute_loss(batch)
+                                loss,_,depth_loss = self.model.module.compute_loss(batch)
                                 val_losses.append(loss)
+                                depth_val_losses.append(depth_loss)
                                 if (cfg.training.max_val_steps is not None) \
                                     and batch_idx >= (cfg.training.max_val_steps-1):
                                     break
                         if len(val_losses) > 0:
                             val_loss = torch.mean(torch.tensor(val_losses)).item()
+                            depth_val_loss = torch.mean(torch.tensor(depth_val_losses)).item()
                             # log epoch average validation loss
                             step_log['val_loss'] = val_loss
+                            step_log['depth_val_loss'] = depth_val_loss
 
                 # run diffusion sampling on a training batch
                 if (self.epoch % cfg.training.sample_every) == 0:

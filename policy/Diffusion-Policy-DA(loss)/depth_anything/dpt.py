@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
+import numpy as np
+import matplotlib.pyplot as plt
 
 from depth_anything.blocks import FeatureFusionBlock, _make_scratch
 from peft import LoraConfig, get_peft_model
@@ -141,7 +143,7 @@ class DPT_DINOv2(nn.Module):
         super(DPT_DINOv2, self).__init__()
         
         assert encoder in ['vits', 'vitb', 'vitl']
-        
+
         # 加载 DINOv2 预训练模型
         if localhub:
             self.pretrained = torch.hub.load('./torchhub/facebookresearch_dinov2_main', 'dinov2_{:}14'.format(encoder), source='local', pretrained=False)
@@ -149,14 +151,14 @@ class DPT_DINOv2(nn.Module):
             self.pretrained = torch.hub.load('facebookresearch/dinov2', 'dinov2_{:}14'.format(encoder))
 
         # LoRA 适配 `qkv` 和 `proj` 层
-        lora_config = LoraConfig(
-            r=16,  # 低秩维度
-            lora_alpha=32,  # 缩放系数
-            lora_dropout=0.1,  # Dropout
-            target_modules=["qkv", "proj"],  # 只适配 Transformer 的注意力层
-            bias="none"
-        )
-        self.pretrained = get_peft_model(self.pretrained, lora_config)
+        # lora_config = LoraConfig(
+        #     r=16,  # 低秩维度
+        #     lora_alpha=32,  # 缩放系数
+        #     lora_dropout=0.1,  # Dropout
+        #     target_modules=["qkv", "proj"],  # 只适配 Transformer 的注意力层
+        #     bias="none"
+        # )
+        # self.pretrained = get_peft_model(self.pretrained, lora_config)
 
         # 获取 Transformer 维度
         dim = self.pretrained.blocks[0].attn.qkv.in_features
@@ -167,31 +169,41 @@ class DPT_DINOv2(nn.Module):
         for param in self.depth_head.parameters():
             param.requires_grad = False  # 冻结 depth_head
 
-        for param in self.pretrained.parameters():
+        # 冻结 patch embedding 层
+        for param in self.pretrained.patch_embed.parameters():
             param.requires_grad = False
+
+        # 冻结前 8 层 Transformer block
+        for i in range(11):
+            for param in self.pretrained.blocks[i].parameters():
+                param.requires_grad = False
+
+        # for param in self.pretrained.parameters():
+        #     param.requires_grad = False
         
-        for name, param in self.pretrained.named_parameters():
-            if "lora" in name:
-                param.requires_grad = True
+        # for name, param in self.pretrained.named_parameters():
+        #     if "lora" in name:
+        #         param.requires_grad = True
 
         # 线性降维层
         self.fc = nn.Linear(dim, features)
 
     def forward(self, x):
+        x = x.float()
         h, w = x.shape[-2:]
         max_size = 350  # 限制最大尺寸
         h = min(h, max_size)
         w = min(w, max_size)
-
         # 允许 `pretrained` 进行微调
         depth_features = self.pretrained.get_intermediate_layers(x, 4, return_class_token=True)
-        with torch.no_grad():
-            patch_h, patch_w = h // 14, w // 14
-            # 冻结 `depth_head` 计算
-            depth = self.depth_head(depth_features, patch_h, patch_w)
-            # 这里不确定用(240, 320)还是(h, w)
-            depth = F.interpolate(depth, size=(240, 320), mode="bilinear", align_corners=True)
-            depth = F.relu(depth)
+        # with torch.no_grad():
+        patch_h, patch_w = h // 14, w // 14
+        # 冻结 `depth_head` 计算
+        depth = self.depth_head(depth_features, patch_h, patch_w)
+        # 这里不确定用(240, 320)还是(h, w)
+        depth = F.interpolate(depth, size=(240, 320), mode="bilinear", align_corners=True)
+        depth = F.relu(depth)
+        depth = -depth
 
         # 仅 `pretrained` 计算梯度
         depth_features = [pair[0] for pair in depth_features]
@@ -200,6 +212,33 @@ class DPT_DINOv2(nn.Module):
         features = self.fc(features)  # [batch_size, 4, 256]
         features = features.mean(dim=1)  # [batch_size, 256]
 
+        # rgb_data = x[0,:,:,:]
+        # image = np.transpose(rgb_data.cpu().numpy().astype(np.uint8)*255, (1, 2, 0))  # 变换为 (H, W, C)
+        # print("image_shape:",image.shape)
+        # plt.figure(figsize=(8, 6))
+        # plt.imshow(image) 
+        # plt.colorbar(label="rgb Value")  # 显示颜色条
+        # plt.axis("off")
+
+        # # 保存为 PNG 文件
+        # plt.savefig("./rgb.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        # plt.close()
+
+        # batch_depth_sample = depth.squeeze(1)[0,:,:]
+        # batch_depth_sample = (batch_depth_sample).cpu().numpy()
+        # vmin, vmax = np.percentile(batch_depth_sample, [5, 95])  # 去掉极端值以提升可视化效果
+        # # image = Image.fromarray(batch_depth_sample, mode="L")
+        # # image.save("depth_image.png")
+        # # 可视化并保存灰度深度图
+        # plt.figure(figsize=(8, 6))
+        # plt.imshow(batch_depth_sample, cmap='viridis')  # 选择合适的颜色映射
+        # plt.colorbar(label="Depth Value")  # 显示颜色条
+        # plt.axis("off")
+        # # 保存为 PNG 文件
+        # plt.savefig("./batch_depth_in_model.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        # plt.close()
+        depth = depth.float()
+        features = features.float()
         return depth.squeeze(1), features
 
 class DepthAnything(DPT_DINOv2, PyTorchModelHubMixin):
