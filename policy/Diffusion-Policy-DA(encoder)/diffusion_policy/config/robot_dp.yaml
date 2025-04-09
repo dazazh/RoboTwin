@@ -41,9 +41,11 @@ policy:
       name: resnet18
       weights: null
     dino_encoder:
-      _target_: depth_anything.dpt_encoder.DPT_DINOv2_Encoder
-      encoder: 'vits'
-      localhub: True
+      _target_: depth_anything_v2.dpt.DepthAnythingV2
+      max_depth: 20
+      encoder: vitb
+      feature: 128
+      out_channels: [48, 96, 192, 384]
     resize_shape: [350,350]
     crop_shape: null
     # constant center crop
@@ -105,7 +107,7 @@ training:
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
-  num_epochs: 600
+  num_epochs: 900
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.

@@ -8,6 +8,8 @@ from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from depth_anything.dpt import DepthAnything
 from depth_anything.dpt_encoder import DPT_DINOv2_Encoder
 from depth_anything.blocks import *
+from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
+from torchvision.transforms import Compose
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
 
@@ -40,12 +42,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         key_transform_map = nn.ModuleDict()
         key_shape_map = dict()
 
-        # self.dino_encoder = DepthAnything.from_pretrained("LiheYoung/depth_anything_vits14")
-        # self.dino_encoder = DPT_DINOv2_Encoder(encoder='vits', localhub=True).to(self.device)
         self.dino_encoder = dino_encoder.to(self.device)
-        checkpoint = torch.load("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(encoder)/diffusion_policy/depth_anything_vits14.pth", map_location="cpu",weights_only=True)
-        self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
-        # print(self.dino_encoder)
+        checkpoint = torch.load("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(encoder)/depth_anything_v2/checkpoint/latest.pth", map_location="cpu")['model']
+        self.dino_encoder.load_state_dict(checkpoint, strict=True)  # `strict=False` 兼容部分加载
 
         # handle sharing vision backbone
         if share_rgb_model:
@@ -167,6 +166,8 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             dino_feature = dino_feature.reshape(batch_size,-1)
             feature = feature.reshape(batch_size,-1)
             feature = torch.cat((feature,dino_feature),dim=1)
+            print("feature:",feature.shape)
+            print("dino_feature:",dino_feature.shape)
             features.append(feature)
         else:
             # run each rgb obs to independent models
@@ -180,9 +181,12 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 img = self.key_transform_map[key](img)
                 dino_feature = self.dino_encoder(img)
                 feature = self.key_model_map[key](img)
+                print("feature:",feature.shape)
+                print("dino_feature:",dino_feature.shape)
                 feature = torch.cat((feature,dino_feature),dim=1)
+                
                 features.append(feature)
-        
+
         # process lowdim input
         for key in self.low_dim_keys:
             data = obs_dict[key]
@@ -195,6 +199,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         
         # concatenate all features
         result = torch.cat(features, dim=-1)
+        print("result:",result.shape)
         return result
     
     @torch.no_grad()

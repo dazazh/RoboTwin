@@ -11,6 +11,8 @@ result_dp3/
 run_all_task.sh
 *.zip
 *.tar
+*.pth
+*.ckpt
 video/*
 eval_video/*
 

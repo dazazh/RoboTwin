@@ -5,13 +5,13 @@ import torch.nn as nn
 import torchvision
 from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 # from diffusion_policy.model.vision.dino import DPT_DINOv2_Encoder
-from depth_anything.dpt import DepthAnything
-from depth_anything.dpt_encoder import DPT_DINOv2_Encoder
-from depth_anything.blocks import *
+# from depth_anything.dpt import DepthAnything
+# from depth_anything.dpt_encoder import DPT_DINOv2_Encoder
+# from depth_anything.blocks import *
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
-from depth_anything.dpt import DepthAnything
-from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
+# from depth_anything.dpt import DepthAnything
+# from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
 import torchvision.transforms.v2 as transforms
 import cv2
 import numpy as np
@@ -22,15 +22,14 @@ from collections import OrderedDict
 from peft import PeftModel
 from peft import LoraConfig, get_peft_model
 
-def update_pretrained_keys(state_dict, old_prefix="pretrained.", new_prefix="pretrained.base_model.model."):
-    """将 state_dict 中所有以 `old_prefix` 开头的 key 替换为 `new_prefix`"""
+def update_pretrained_keys(state_dict):
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
-        if k.startswith(old_prefix):
-            new_key = k.replace(old_prefix, new_prefix, 1)  # 只替换第一个出现的 `pretrained.`
+        if k.startswith('module.'):
+            name = k[7:]  # 去掉 'module.'
         else:
-            new_key = k
-        new_state_dict[new_key] = v
+            name = k
+        new_state_dict[name] = v
     return new_state_dict
 
 class MultiImageObsEncoder(ModuleAttrMixin):
@@ -64,12 +63,13 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         # self.dino_encoder = dino_encoder.from_pretrained("LiheYoung/depth_anything_vits14")
         # self.dino_encoder = DPT_DINOv2_Encoder(encoder='vits', localhub=True).to(self.device)
         self.dino_encoder = dino_encoder
-        checkpoint = torch.load("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(encoder)/diffusion_policy/depth_anything_vits14.pth", map_location="cpu",weights_only=True)
-        self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
+        ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth"
+        checkpoint = update_pretrained_keys(torch.load(ckpt_path, map_location="cpu")['model'])
+        self.dino_encoder.load_state_dict(checkpoint, strict=True)  # `strict=False` 兼容部分加载
         # print(self.dino_encoder)
         # LoRA 适配 `qkv` 和 `proj` 层
         # print(self.dino_encoder)
-        self.dino_encoder.float()
+        # self.dino_encoder.float()
         # handle sharing vision backbone
         if share_rgb_model:
             assert isinstance(rgb_model, nn.Module)

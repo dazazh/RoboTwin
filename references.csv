@@ -1,0 +1,74 @@
+Title,Authors
+VideoChat: Chat-Centric Video Understanding,"Kunchang Li, Yinan He, Yi Wang, Yizhuo Li, Wen Wang, Ping Luo, Yali Wang, Limin Wang, Yu Qiao"
+X-LLM: Bootstrapping Advanced Large Language Models by Treating Multi-Modalities as Foreign Languages,"Feilong Chen, Minglun Han, Haozhi Zhao, Qingyang Zhang, Jing Shi, Shuang Xu, Bo Xu"
+LLaMA-Adapter V2: Parameter-Efficient Visual Instruction Model,"Peng Gao, Jiaming Han, Renrui Zhang, Ziyi Lin, Shijie Geng, Aojun Zhou, W. Zhang, Pan Lu, Conghui He, Xiangyu Yue, Hongsheng Li, Y. Qiao"
+mPLUG-Owl: Modularization Empowers Large Language Models with Multimodality,"Qinghao Ye, Haiyang Xu, Guohai Xu, Jiabo Ye, Ming Yan, Yi Zhou, Junyan Wang, Anwen Hu, Pengcheng Shi, Yaya Shi, Chenliang Li, Yuanhong Xu, Hehong Chen, Junfeng Tian, Qiang Qi, Ji Zhang, Feiyan Huang"
+MiniGPT-4: Enhancing Vision-Language Understanding with Advanced Large Language Models,"Deyao Zhu, Jun Chen, Xiaoqian Shen, Xiang Li, Mohamed Elhoseiny"
+Visual Instruction Tuning,"Haotian Liu, Chunyuan Li, Qingyang Wu, Yong Jae Lee"
+LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models,"Zhiqiang Hu, Yihuai Lan, Lei Wang, Wanyu Xu, Ee-Peng Lim, R. Lee, Lidong Bing, Soujanya Poria"
+LLaMA-Adapter: Efficient Fine-tuning of Language Models with Zero-init Attention,"Renrui Zhang, Jiaming Han, Aojun Zhou, Xiangfei Hu, Shilin Yan, Pan Lu, Hongsheng Li, Peng Gao, Y. Qiao"
+MM-REACT: Prompting ChatGPT for Multimodal Reasoning and Action,"Zhengyuan Yang, Linjie Li, Jianfeng Wang, Kevin Lin, E. Azarnasab, Faisal Ahmed, Zicheng Liu, Ce Liu, Michael Zeng, Lijuan Wang"
+"Visual ChatGPT: Talking, Drawing and Editing with Visual Foundation Models","Chenfei Wu, Sheng-Kai Yin, Weizhen Qi, Xiaodong Wang, Zecheng Tang, Nan Duan"
+PaLM-E: An Embodied Multimodal Language Model,"Danny Driess, F. Xia, Mehdi S. M. Sajjadi, Corey Lynch, Aakanksha Chowdhery, Brian Ichter, Ayzaan Wahid, Jonathan Tompson, Q. Vuong, Tianhe Yu, Wenlong Huang, Yevgen Chebotar, P. Sermanet, Daniel Duckworth, S. Levine, Vincent Vanhoucke, Karol Hausman, Marc Toussaint, Klaus Greff, Andy Zeng, Igor Mordatch, Peter R. Florence"
+LLaMA: Open and Efficient Foundation Language Models,"Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, M. Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurélien Rodriguez, Armand Joulin, Edouard Grave, Guillaume Lample"
+BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models,"Junnan Li, Dongxu Li, S. Savarese, Steven C. H. Hoi"
+OpenD: A Benchmark for Language-Driven Door and Drawer Opening,"Yizhou Zhao, Qiaozi Gao, Liang Qiu, G. Thattai, G. Sukhatme"
+EVA: Exploring the Limits of Masked Visual Representation Learning at Scale,"Yuxin Fang, Wen Wang, Binhui Xie, Quan-Sen Sun, Ledell Yu Wu, Xinggang Wang, Tiejun Huang, Xinlong Wang, Yue Cao"
+VIMA: General Robot Manipulation with Multimodal Prompts,"Yunfan Jiang, Agrim Gupta, Zichen Zhang, Guanzhi Wang, Yongqiang Dou, Yanjun Chen, Li Fei-Fei, Anima Anandkumar, Yuke Zhu, Linxi (Jim) Fan"
+VIP: Towards Universal Visual Reward and Representation via Value-Implicit Pre-Training,"Yecheng Jason Ma, Shagun Sodhani, Dinesh Jayaraman, O. Bastani, Vikash Kumar, Amy Zhang"
+VLMbench: A Compositional Benchmark for Vision-and-Language Manipulation,"Kai Zheng, Xiaotong Chen, O. C. Jenkins, X. Wang"
+Egocentric Video-Language Pretraining,"Kevin Lin, Alex Wang, Mattia Soldan, Michael Wray, Rui Yan, Eric Z. Xu, Difei Gao, Rong-Cheng Tu, Wenzhe Zhao, Weijie Kong, Chengfei Cai, Hongfa Wang, D. Damen, Bernard Ghanem, Wei Liu, Mike Zheng Shou"
+Flamingo: a Visual Language Model for Few-Shot Learning,"Jean-Baptiste Alayrac, Jeff Donahue, Pauline Luc, Antoine Miech, Iain Barr, Yana Hasson, Karel Lenc, A. Mensch, Katie Millican, Malcolm Reynolds, Roman Ring, Eliza Rutherford, Serkan Cabi, Tengda Han, Zhitao Gong, Sina Samangooei, Marianne Monteiro, Jacob Menick, Sebastian Borgeaud, Andy Brock, Aida Nematzadeh, Sahand Sharifzadeh, Mikolaj Binkowski, Ricardo Barreira, O. Vinyals, Andrew Zisserman, K. Simonyan"
+"Do As I Can, Not As I Say: Grounding Language in Robotic Affordances","Michael Ahn, Anthony Brohan, Noah Brown, Yevgen Chebotar, Omar Cortes, Byron David, Chelsea Finn, K. Gopalakrishnan, Karol Hausman, Alexander Herzog, Daniel Ho, Jasmine Hsu, Julian Ibarz, Brian Ichter, A. Irpan, Eric Jang, Rosario M Jauregui Ruano, Kyle Jeffrey, Sally Jesmonth, N. Joshi, Ryan C. Julian, Dmitry Kalashnikov, Yuheng Kuang, Kuang-Huei Lee, S. Levine, Yao Lu, Linda Luu, Carolina Parada, P. Pastor, Jornell Quiambao, Kanishka Rao, Jarek Rettinghouse, D. Reyes, P. Sermanet, Nicolas Sievers, Clayton Tan, Alexander Toshev, Vincent Vanhoucke, F. Xia, Ted Xiao, Peng Xu, Sichun Xu, Mengyuan Yan"
+R3M: A Universal Visual Representation for Robot Manipulation,"Suraj Nair, A. Rajeswaran, Vikash Kumar, Chelsea Finn, Abhi Gupta"
+AssistQ: Affordance-centric Question-driven Task Completion for Egocentric Assistant,"B. Wong, Joya Chen, You Wu, Stan Weixian Lei, Dongxing Mao, Difei Gao, Mike Zheng Shou"
+LiT: Zero-Shot Transfer with Locked-image text Tuning,"Xiaohua Zhai, Xiao Wang, Basil Mustafa, A. Steiner, Daniel Keysers, Alexander Kolesnikov, Lucas Beyer"
+"Ego4D: Around the World in 3,000 Hours of Egocentric Video","K. Grauman, Andrew Westbury, Eugene Byrne, Zachary Chavis, Antonino Furnari, Rohit Girdhar, Jackson Hamburger, Hao Jiang, Miao Liu, Xingyu Liu, Miguel Martin, Tushar Nagarajan, Ilija Radosavovic, Santhosh K. Ramakrishnan, Fiona Ryan, J. Sharma, Michael Wray, Mengmeng Xu, Eric Z. Xu, Chen Zhao, Siddhant Bansal, Dhruv Batra, Vincent Cartillier, S. Crane, Tien Do, Morrie Doulaty, Akshay Erapalli, Christoph Feichtenhofer, A. Fragomeni, Qichen Fu, Christian Fuegen, A. Gebreselasie, Cristina González, James M. Hillis, Xuhua Huang, Yifei Huang, Wenqi Jia, Weslie Khoo, Jáchym Kolár, Satwik Kottur, Anurag Kumar, F. Landini, Chao Li, Yanghao Li, Zhenqiang Li, K. Mangalam, Raghava Modhugu, Jonathan Munro, Tullie Murrell, Takumi Nishiyasu, Will Price, Paola Ruiz Puentes, Merey Ramazanova, Leda Sari, K. Somasundaram, Audrey Southerland, Yusuke Sugano, Ruijie Tao, Minh Vo, Yuchen Wang, Xindi Wu, Takuma Yagi, Yunyi Zhu, P. Arbeláez, David J. Crandall, D. Damen, G. Farinella, Bernard Ghanem, V. Ithapu, C. V. Jawahar, H. Joo, Kris Kitani, Haizhou Li, Richard A. Newcombe, A. Oliva, H. Park, James M. Rehg, Yoichi Sato, Jianbo Shi, Mike Zheng Shou, A. Torralba, L. Torresani, Mingfei Yan, J. Malik"
+CLIPort: What and Where Pathways for Robotic Manipulation,"Mohit Shridhar, Lucas Manuelli, D. Fox"
+Multimodal Few-Shot Learning with Frozen Language Models,"M. Tsimpoukelli, Jacob Menick, Serkan Cabi, S. Eslami, O. Vinyals, Felix Hill, Zacharias Janssen"
+LoRA: Low-Rank Adaptation of Large Language Models,"J. E. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Weizhu Chen"
+Learning Transferable Visual Models From Natural Language Supervision,"Alec Radford, Jong Wook Kim, Chris Hallacy, A. Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, I. Sutskever"
+VisualGPT: Data-efficient Adaptation of Pretrained Language Models for Image Captioning,"Jun Chen, Han Guo, Kai Yi, Boyang Albert Li, Mohamed Elhoseiny"
+VinVL: Making Visual Representations Matter in Vision-Language Models,"Pengchuan Zhang, Xiujun Li, Xiaowei Hu, Jianwei Yang, Lei Zhang, Lijuan Wang, Yejin Choi, Jianfeng Gao"
+An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale,"Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, G. Heigold, S. Gelly, Jakob Uszkoreit, N. Houlsby"
+Language Models are Few-Shot Learners,"Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, J. Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, T. Henighan, R. Child, A. Ramesh, Daniel M. Ziegler, Jeff Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Ma-teusz Litwin, Scott Gray, B. Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, I. Sutskever, Dario Amodei"
+"Rescaling Egocentric Vision: Collection, Pipeline and Challenges for EPIC-KITCHENS-100","D. Damen, Hazel Doughty, G. Farinella, Antonino Furnari, E. Kazakos, Jian Ma, D. Moltisanti, Jonathan Munro, Toby Perrett, Will Price, Michael Wray"
+Oscar: Object-Semantics Aligned Pre-training for Vision-Language Tasks,"Xiujun Li, Xi Yin, Chunyuan Li, Xiaowei Hu, Pengchuan Zhang, Lei Zhang, Lijuan Wang, Houdong Hu, Li Dong, Furu Wei, Yejin Choi, Jianfeng Gao"
+Relay Policy Learning: Solving Long-Horizon Tasks via Imitation and Reinforcement Learning,"Abhishek Gupta, Vikash Kumar, Corey Lynch, S. Levine, Karol Hausman"
+Meta-World: A Benchmark and Evaluation for Multi-Task and Meta Reinforcement Learning,"Tianhe Yu, Deirdre Quillen, Zhanpeng He, Ryan C. Julian, Karol Hausman, Chelsea Finn, S. Levine"
+UNITER: UNiversal Image-TExt Representation Learning,"Yen-Chun Chen, Linjie Li, Licheng Yu, Ahmed El Kholy, Faisal Ahmed, Zhe Gan, Yu Cheng, Jingjing Liu"
+3D convolutional neural network for object recognition: a review,"R. Singh, Ajay Mittal, Rajesh K. Bhatia"
+"Conceptual Captions: A Cleaned, Hypernymed, Image Alt-text Dataset For Automatic Image Captioning","Piyush Sharma, Nan Ding, Sebastian Goodman, Radu Soricut"
+VirtualHome: Simulating Household Activities Via Programs,"Xavier Puig, K. Ra, Marko Boben, Jiaman Li, Tingwu Wang, S. Fidler, A. Torralba"
+Charades-Ego: A Large-Scale Dataset of Paired Third and First Person Videos,"Gunnar A. Sigurdsson, A. Gupta, C. Schmid, Ali Farhadi, Alahari Karteek"
+When will you do what? - Anticipating Temporal Occurrences of Activities,"Yazan Abu Farha, Alexander Richard, Juergen Gall"
+Decoupled Weight Decay Regularization,"I. Loshchilov, F. Hutter"
+Deep Residual Learning for Image Recognition,"Kaiming He, X. Zhang, Shaoqing Ren, Jian Sun"
+Delving into egocentric actions,"Yin Li, Zhefan Ye, James M. Rehg"
+ActivityNet: A large-scale video benchmark for human activity understanding,"Fabian Caba Heilbron, Victor Escorcia, Bernard Ghanem, Juan Carlos Niebles"
+Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift,"Sergey Ioffe, Christian Szegedy"
+Microsoft COCO: Common Objects in Context,"Tsung-Yi Lin, M. Maire, Serge J. Belongie, James Hays, P. Perona, Deva Ramanan, Piotr Dollár, C. L. Zitnick"
+Multi-layer Perceptron,Zheng Rong Yang
+ImageNet: A large-scale hierarchical image database,"Jia Deng, Wei Dong, R. Socher, Li-Jia Li, K. Li, Li Fei-Fei"
+HuggingGPT: Solving AI Tasks with ChatGPT and its Friends in Hugging Face,"Yongliang Shen, Kaitao Song, Xu Tan, Dongsheng Li, Weiming Lu, Y. Zhuang"
+"Instruction tuning with gpt-4, 2023",
+Multilayer Perceptrons,
+"Assistant: 1. First, locate the coffee maker",
+Multi-Layer Perceptrons,"Rudolf Kruse, C. Borgelt, F. Klawonn, C. Moewes, M. Steinbrecher, Pascal Held"
+"Since there is a room with a desk, chair, and computer, you can use this as a meeting room",
+"By following these steps, you can use the items in the image to make yourself cool, maintain comfort, and minimize the discomfort caused by high temperatures",
+"After you have selected your meeting point and organized your materials, send an invitation to your guests to let them know about the meeting time, location, and any other relevant information",
+"Once the coffee has been poured, you can add any desired ingredients, such as sugar or milk",
+"To make the meeting more professional, you can rearrange the furniture in the room to face the large window",
+"locate the coffee maker, which is a white coffee machine sitting on a wooden counter near a black refrigerator",
+"Since there is no one in the room, schedule your meeting at a convenient time for both you and the person you'll be meeting with",
+"Since there is a desk and chair in the room, you can use them to prepare your materials for the meeting",
+Embodied planning for concrete tasks with image input. Assistant: 1. Identify your meeting point,
+Give a plan to make a coffee based on the image and explain it in detail,
+"Finally, adjust the fan's settings to increase the airflow and cooling effect",
+Human: Give a plan to make a coffee based on the image and explain it in detail. Figure 8: Embodied planning of in real-world scenarios. Assistant: 1. Identify your meeting point,
+"Place the mouse pad under the fan, ensuring that it covers a majority of the fan's surface, to maximize the airflow and cooling effect on your skin",
+"Fill the water reservoir with water, either by using a tap or a bottle, and select the type and amount of coffee to brew. Depending on the coffee maker",
+"Human: With the objects in the image, if you feel hot, what will you do, write your plan and explain it. (b) Embodied planning for abstract tasks",
+"After selecting the desired coffee, press the \""brew\"" button. The coffee maker will then brew the selected coffee",
+"take a closer look at the coffee maker to find the buttons and functions, such as the power button, water reservoir, and the selection button",
