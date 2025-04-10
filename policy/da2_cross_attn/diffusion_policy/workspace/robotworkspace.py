@@ -136,7 +136,7 @@ class RobotWorkspace(BaseWorkspace):
 		)
 
         # configure logging
-        WANDB = False
+        WANDB = True
         if WANDB and accelerator.is_main_process:
             wandb_run = wandb.init(
                 dir=str(self.output_dir),
@@ -207,8 +207,8 @@ class RobotWorkspace(BaseWorkspace):
                         if train_sampling_batch is None:
                             train_sampling_batch = batch
                         # compute loss  
-                        raw_loss,loss,depth_loss = self.model.module.compute_loss(batch,self.epoch)
-                        loss = raw_loss / cfg.training.gradient_accumulate_every
+                        loss = self.model.module.compute_loss(batch,self.epoch)
+                        loss = loss / cfg.training.gradient_accumulate_every
                         accelerator.backward(loss)
 
                         # step optimizer
@@ -222,13 +222,11 @@ class RobotWorkspace(BaseWorkspace):
                             ema.step(self.model.module)
 
                         # logging
-                        raw_loss_cpu = raw_loss.item()
-                        depth_loss_cpu = depth_loss.item()
-                        tepoch.set_postfix(loss=raw_loss_cpu, refresh=False)
-                        train_losses.append(raw_loss_cpu)
+                        loss_cpu = loss.item()
+                        tepoch.set_postfix(loss=loss_cpu, refresh=False)
+                        train_losses.append(loss_cpu)
                         step_log = {
-                            'train_loss': raw_loss_cpu,
-                            'depth_loss': depth_loss_cpu,
+                            'train_loss': loss_cpu,
                             'global_step': self.global_step,
                             'epoch': self.epoch,
                             'lr': lr_scheduler.get_last_lr()[0]
@@ -265,23 +263,19 @@ class RobotWorkspace(BaseWorkspace):
                 if (self.epoch % cfg.training.val_every) == 0:
                     with torch.no_grad():
                         val_losses = list()
-                        depth_val_losses = list()
                         with tqdm.tqdm(val_dataloader, desc=f"Validation epoch {self.epoch}", 
                                 leave=False, mininterval=cfg.training.tqdm_interval_sec, disable=not accelerator.is_local_main_process) as tepoch:
                             for batch_idx, batch in enumerate(tepoch):
                                 batch = dataset.postprocess(batch)
-                                loss,_,depth_loss = self.model.module.compute_loss(batch,self.epoch)
+                                loss = self.model.module.compute_loss(batch,self.epoch)
                                 val_losses.append(loss)
-                                depth_val_losses.append(depth_loss)
                                 if (cfg.training.max_val_steps is not None) \
                                     and batch_idx >= (cfg.training.max_val_steps-1):
                                     break
                         if len(val_losses) > 0:
                             val_loss = torch.mean(torch.tensor(val_losses)).item()
-                            depth_val_loss = torch.mean(torch.tensor(depth_val_losses)).item()
                             # log epoch average validation loss
                             step_log['val_loss'] = val_loss
-                            step_log['depth_val_loss'] = depth_val_loss
 
                 # run diffusion sampling on a training batch
                 if (self.epoch % cfg.training.sample_every) == 0:

@@ -179,7 +179,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # (N*B,C,H,W)
             imgs = torch.cat(imgs, dim=0)
             # (N*B,D)
-            depth, dino_feature = self.dino_encoder(imgs)
+            dino_feature = self.dino_encoder(imgs)
             feature = self.key_model_map['rgb'](imgs)
             # (N,B,D)
             dino_feature = dino_feature.reshape(-1,batch_size,*dino_feature.shape[1:])
@@ -191,7 +191,6 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             dino_feature = dino_feature.reshape(batch_size,-1)
             feature = feature.reshape(batch_size,-1)
             feature = torch.cat((feature,dino_feature),dim=1)
-            batch_depth.append(depth)
             features.append(feature)
         else:
             # run each rgb obs to independent models
@@ -203,10 +202,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
-                depth, dino_feature = self.dino_encoder(img)
+                dino_feature = self.dino_encoder(img)
                 feature = self.key_model_map[key](img)
                 feature = torch.cat((feature,dino_feature),dim=1)
-                batch_depth.append(depth)
                 features.append(feature)
         
         # process lowdim input
@@ -221,8 +219,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         
         # concatenate all features
         result = torch.cat(features, dim=-1)
-        batch_depth = torch.cat(batch_depth,dim=0)
-        return result,batch_depth
+        return result
     
     @torch.no_grad()
     def output_shape(self):
@@ -236,7 +233,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 dtype=self.dtype,
                 device=self.device)
             example_obs_dict[key] = this_obs
-        example_output, _ = self.forward(example_obs_dict)
+        example_output = self.forward(example_obs_dict)
         output_shape = example_output.shape[1:]
         # print(output_shape)
         return output_shape
