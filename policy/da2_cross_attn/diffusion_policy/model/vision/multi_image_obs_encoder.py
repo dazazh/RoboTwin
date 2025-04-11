@@ -205,6 +205,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 dino_feature = self.dino_encoder(img)
                 feature = self.key_model_map[key](img)
                 feature = torch.cat((feature,dino_feature),dim=1)
+                # print("vision_feature:",feature.shape)
                 features.append(feature)
         
         # process lowdim input

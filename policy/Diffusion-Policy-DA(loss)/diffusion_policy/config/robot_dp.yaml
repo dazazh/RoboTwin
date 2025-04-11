@@ -47,7 +47,7 @@ policy:
       _target_: depth_anything_v2.dpt.DepthAnythingV2
       encoder: vitb
       features: 128
-      out_channels: [48, 96, 192, 384]
+      out_channels: [96, 192, 384, 768]
 
     resize_shape: [350,350]
     crop_shape: null

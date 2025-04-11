@@ -10,6 +10,7 @@ from .dinov2 import DINOv2
 from .util.blocks import FeatureFusionBlock, _make_scratch
 from .util.transform import Resize, NormalizeImage, PrepareForNet
 
+
 def colorize_depth(depth, min_val=None, max_val=None):
     """将深度图转为伪彩色（Jet colormap）"""
     min_val = depth.min() if min_val is None else min_val
@@ -119,7 +120,8 @@ class DPTHead(nn.Module):
             nn.Conv2d(head_features_1 // 2, head_features_2, kernel_size=3, stride=1, padding=1),
             nn.ReLU(True),
             nn.Conv2d(head_features_2, 1, kernel_size=1, stride=1, padding=0),
-            nn.Sigmoid()
+            nn.ReLU(True),
+            nn.Identity(),
         )
     
     def forward(self, out_features, patch_h, patch_w):
@@ -165,8 +167,7 @@ class DepthAnythingV2(nn.Module):
         features=256, 
         out_channels=[256, 512, 1024, 1024], 
         use_bn=False, 
-        use_clstoken=False,
-        max_depth=20.0
+        use_clstoken=False
     ):
         super(DepthAnythingV2, self).__init__()
         
@@ -177,24 +178,38 @@ class DepthAnythingV2(nn.Module):
             'vitg': [9, 19, 29, 39]
         }
         
-        self.max_depth = max_depth
-        
         self.encoder = encoder
         self.pretrained = DINOv2(model_name=encoder)
-        dim = self.pretrained.blocks[0].attn.qkv.in_features
-        self.fc = nn.Linear(dim, features)
         
         self.depth_head = DPTHead(self.pretrained.embed_dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken)
-    
+        dim = self.pretrained.blocks[0].attn.qkv.in_features
+        self.fc = nn.Linear(dim, features)
+
+
     def forward(self, x):
         with torch.no_grad():
             patch_h, patch_w = x.shape[-2] // 14, x.shape[-1] // 14
             depth_features = self.pretrained.get_intermediate_layers(x, self.intermediate_layer_idx[self.encoder], return_class_token=True)
 
-            # depth = self.depth_head(depth_features, patch_h, patch_w)
-            # depth = F.interpolate(depth, size=(240, 320), mode="bilinear", align_corners=True)
-            # depth = F.relu(depth)
+            depth = self.depth_head(depth_features, patch_h, patch_w)
+            depth = F.relu(depth)
+            depth_cpu = depth
+            print(depth.shape)
 
+        rgb_data = x[0,:,:,:]
+        print("in_compute_loss_rgb_shape:",rgb_data.shape)
+        image = np.transpose(rgb_data.cpu().numpy(), (1, 2, 0))  # 变换为 (H, W, C)
+        plt.figure(figsize=(8, 6))
+        plt.imshow(image) 
+        plt.colorbar(label="rgb Value")  # 显示颜色条
+        plt.axis("off")
+        plt.savefig("./test_depth/rgb_in_dpt.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        plt.close()
+
+        depth_cpu = colorize_depth(depth_cpu.cpu().numpy().squeeze(1)[0])
+        cv2.imwrite("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/test.jpg", depth_cpu)
+
+        depth = F.interpolate(depth, size=(240, 320), mode="bilinear", align_corners=True)
         # 仅 `pretrained` 计算梯度
         depth_features = [pair[0] for pair in depth_features]
         features = torch.stack(depth_features, dim=1)  # [batch_size, 4, 625, 384]
@@ -202,7 +217,7 @@ class DepthAnythingV2(nn.Module):
         features = self.fc(features)  # [batch_size, 4, 256]
         features = features.mean(dim=1)  # [batch_size, 256]
         
-        return features
+        return depth.squeeze(1), features
     
     @torch.no_grad()
     def infer_image(self, raw_image, input_size=518):

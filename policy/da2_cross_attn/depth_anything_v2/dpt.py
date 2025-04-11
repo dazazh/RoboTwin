@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from .dinov2 import DINOv2
 from .util.blocks import FeatureFusionBlock, _make_scratch
 from .util.transform import Resize, NormalizeImage, PrepareForNet
+from .util.depth_fusion import MAPBlock
 
 def colorize_depth(depth, min_val=None, max_val=None):
     """将深度图转为伪彩色（Jet colormap）"""
@@ -150,12 +151,14 @@ class DPTHead(nn.Module):
         path_3 = self.scratch.refinenet3(path_4, layer_3_rn, size=layer_2_rn.shape[2:])
         path_2 = self.scratch.refinenet2(path_3, layer_2_rn, size=layer_1_rn.shape[2:])
         path_1 = self.scratch.refinenet1(path_2, layer_1_rn)
+        feature = torch.mean(path_1, dim=1, keepdim=False)
         
-        out = self.scratch.output_conv1(path_1)
-        out = F.interpolate(out, (int(patch_h * 14), int(patch_w * 14)), mode="bilinear", align_corners=True)
-        out = self.scratch.output_conv2(out)
+        # out = self.scratch.output_conv1(path_1)
+        # out = F.interpolate(out, (int(patch_h * 14), int(patch_w * 14)), mode="bilinear", align_corners=True)
+        # out = self.scratch.output_conv2(out)
         
-        return out
+        # return out
+        return feature
 
 
 class DepthAnythingV2(nn.Module):
@@ -181,28 +184,34 @@ class DepthAnythingV2(nn.Module):
         
         self.encoder = encoder
         self.pretrained = DINOv2(model_name=encoder)
-        dim = self.pretrained.blocks[0].attn.qkv.in_features
-        self.fc = nn.Linear(dim, features)
+        # dim = self.pretrained.blocks[0].attn.qkv.in_features
+        # self.fc = nn.Linear(dim, features)
         
         self.depth_head = DPTHead(self.pretrained.embed_dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken)
+
+        for param in self.pretrained.parameters():
+            param.requires_grad_(False)  # 冻结所有参数
+
+        for param in self.depth_head.parameters():
+            param.requires_grad_(False)  # 冻结所有参数
+
+        num_heads = 16
+        num_obs_latents = 8
+        hidden_size = 64 # depth_feature_len
+        self.depth_adapter = MAPBlock(n_latents = num_obs_latents, vis_dim = 200, embed_dim = hidden_size, n_heads = num_heads)
     
     def forward(self, x):
-        with torch.no_grad():
-            patch_h, patch_w = x.shape[-2] // 14, x.shape[-1] // 14
-            depth_features = self.pretrained.get_intermediate_layers(x, self.intermediate_layer_idx[self.encoder], return_class_token=True)
+        patch_h, patch_w = x.shape[-2] // 14, x.shape[-1] // 14
+        depth_features = self.pretrained.get_intermediate_layers(x, self.intermediate_layer_idx[self.encoder], return_class_token=True)
+        depth_features = self.depth_head(depth_features, patch_h, patch_w)
 
-            # depth = self.depth_head(depth_features, patch_h, patch_w)
-            # depth = F.interpolate(depth, size=(240, 320), mode="bilinear", align_corners=True)
-            # depth = F.relu(depth)
+        # print("depth_features:",depth_features.shape)
 
-        # 仅 `pretrained` 计算梯度
-        depth_features = [pair[0] for pair in depth_features]
-        features = torch.stack(depth_features, dim=1)  # [batch_size, 4, 625, 384]
-        features = features.mean(dim=2)  # [batch_size, 4, 384]
-        features = self.fc(features)  # [batch_size, 4, 256]
-        features = features.mean(dim=1)  # [batch_size, 256]
+        depth_features = self.depth_adapter(depth_features)
+        depth_features = depth_features.flatten(1)
+        # print(depth_features.shape)
         
-        return features
+        return depth_features
     
     @torch.no_grad()
     def infer_image(self, raw_image, input_size=518):

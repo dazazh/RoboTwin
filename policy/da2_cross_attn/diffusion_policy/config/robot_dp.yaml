@@ -132,7 +132,8 @@ logging:
   project: diffusion_policy_debug
   resume: True
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}_da-loss_fc-project_4para
+  # name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}_da-loss_fc-project_4para
+  name: da2_cross_attn_4.11_2.49
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null

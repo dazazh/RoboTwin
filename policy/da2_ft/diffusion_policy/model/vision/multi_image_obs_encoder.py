@@ -22,15 +22,14 @@ from collections import OrderedDict
 from peft import PeftModel
 from peft import LoraConfig, get_peft_model
 
-def update_pretrained_keys(state_dict, old_prefix="pretrained.", new_prefix="pretrained.base_model.model."):
-    """将 state_dict 中所有以 `old_prefix` 开头的 key 替换为 `new_prefix`"""
+def update_pretrained_keys(state_dict):
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
-        if k.startswith(old_prefix):
-            new_key = k.replace(old_prefix, new_prefix, 1)  # 只替换第一个出现的 `pretrained.`
+        if k.startswith('module.'):
+            name = k[7:]  # 去掉 'module.'
         else:
-            new_key = k
-        new_state_dict[new_key] = v
+            name = k
+        new_state_dict[name] = v
     return new_state_dict
 
 class MultiImageObsEncoder(ModuleAttrMixin):
@@ -64,8 +63,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         # self.dino_encoder = dino_encoder.from_pretrained("LiheYoung/depth_anything_vits14")
         # self.dino_encoder = DPT_DINOv2_Encoder(encoder='vits', localhub=True).to(self.device)
         self.dino_encoder = dino_encoder
-        checkpoint = torch.load("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth", map_location="cpu")['model']
-        self.dino_encoder.load_state_dict(checkpoint, strict=True)  # `strict=False` 兼容部分加载
+        ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth"
+        checkpoint = update_pretrained_keys(torch.load(ckpt_path, map_location="cpu")['model'])
+        self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
         # print(self.dino_encoder)
         # LoRA 适配 `qkv` 和 `proj` 层
         # print(self.dino_encoder)
@@ -179,7 +179,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # (N*B,C,H,W)
             imgs = torch.cat(imgs, dim=0)
             # (N*B,D)
-            depth, dino_feature = self.dino_encoder(imgs)
+            dino_feature = self.dino_encoder(imgs)
             feature = self.key_model_map['rgb'](imgs)
             # (N,B,D)
             dino_feature = dino_feature.reshape(-1,batch_size,*dino_feature.shape[1:])
@@ -191,7 +191,6 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             dino_feature = dino_feature.reshape(batch_size,-1)
             feature = feature.reshape(batch_size,-1)
             feature = torch.cat((feature,dino_feature),dim=1)
-            batch_depth.append(depth)
             features.append(feature)
         else:
             # run each rgb obs to independent models
@@ -203,10 +202,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
-                depth, dino_feature = self.dino_encoder(img)
+                dino_feature = self.dino_encoder(img)
                 feature = self.key_model_map[key](img)
                 feature = torch.cat((feature,dino_feature),dim=1)
-                batch_depth.append(depth)
                 features.append(feature)
         
         # process lowdim input
@@ -221,8 +219,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         
         # concatenate all features
         result = torch.cat(features, dim=-1)
-        batch_depth = torch.cat(batch_depth,dim=0)
-        return result,batch_depth
+        return result
     
     @torch.no_grad()
     def output_shape(self):
@@ -236,7 +233,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 dtype=self.dtype,
                 device=self.device)
             example_obs_dict[key] = this_obs
-        example_output, _ = self.forward(example_obs_dict)
+        example_output = self.forward(example_obs_dict)
         output_shape = example_output.shape[1:]
         # print(output_shape)
         return output_shape

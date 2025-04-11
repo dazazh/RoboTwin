@@ -295,15 +295,15 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         batch_depth = self.affine_normalize(batch_depth)
 
         # 可视化输入rgb是否有问题+验证normalizer是否学到正确参数
-        # rgb_data = nobs['head_cam'][0,0,:,:,:]
-        # print("in_compute_loss_rgb_shape:",rgb_data.shape)
-        # image = np.transpose(rgb_data.cpu().numpy(), (1, 2, 0))  # 变换为 (H, W, C)
-        # plt.figure(figsize=(8, 6))
-        # plt.imshow(image) 
-        # plt.colorbar(label="rgb Value")  # 显示颜色条
-        # plt.axis("off")
-        # plt.savefig("./in_compute_loss_rgb_with_linear_normalizer.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
-        # plt.close()
+        rgb_data = nobs['head_cam'][0,0,:,:,:]
+        print("in_compute_loss_rgb_shape:",rgb_data.shape)
+        image = np.transpose(rgb_data.cpu().numpy(), (1, 2, 0))  # 变换为 (H, W, C)
+        plt.figure(figsize=(8, 6))
+        plt.imshow(image) 
+        plt.colorbar(label="rgb Value")  # 显示颜色条
+        plt.axis("off")
+        plt.savefig("./in_compute_loss_rgb_with_linear_normalizer.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        plt.close()
 
         # 检查depth anything的gt和模型输出
         batch_depth_sample = batch_depth[0,:,:]

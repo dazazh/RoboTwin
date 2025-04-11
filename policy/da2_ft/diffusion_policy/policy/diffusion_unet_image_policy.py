@@ -60,7 +60,6 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             cond_predict_scale=cond_predict_scale
         )
 
-        self.lambda_depth = 0.1
         self.obs_encoder = obs_encoder
         self.model = model
         self.noise_scheduler = noise_scheduler
@@ -150,7 +149,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         if self.obs_as_global_cond:
             # condition through global feature
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
-            nobs_features, _ = self.obs_encoder(this_nobs)
+            nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(B, -1)
             # empty data for action
@@ -159,7 +158,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         else:
             # condition through impainting
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
-            nobs_features, _ = self.obs_encoder(this_nobs)
+            nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(B, To, -1)
             cond_data = torch.zeros(size=(B, T, Da+Do), device=device, dtype=dtype)
@@ -222,8 +221,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         assert 'valid_mask' not in batch
         nobs = self.normalizer.normalize(batch['obs'])
         # 是否需要取消线性层
-        # nobs = self.normalizer.unnormalize(nobs)
-        target_batch_depth = batch['target_head_depth']
+        nobs = self.normalizer.unnormalize(nobs)
         nactions = self.normalizer['action'].normalize(batch['action'])
         batch_size = nactions.shape[0]
         horizon = nactions.shape[1]
@@ -237,14 +235,13 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, 
                 lambda x: x[:,:self.n_obs_steps,...].reshape(-1,*x.shape[2:]))
-            this_target_batch_depth = target_batch_depth[:,:self.n_obs_steps,...].reshape(-1,*target_batch_depth.shape[2:])
-            nobs_features,batch_depth = self.obs_encoder(this_nobs)
+            nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
         else:
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, lambda x: x.reshape(-1, *x.shape[2:]))
-            nobs_features,batch_depth = self.obs_encoder(this_nobs)
+            nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)
             cond_data = torch.cat([nactions, nobs_features], dim=-1)
@@ -290,9 +287,6 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # print("this_target_batch_depth:",this_target_batch_depth.shape)
         # print("this_nobs_rgb:",this_nobs['head_cam'].shape)
         # print("batch_depth:",batch_depth.shape)
-        
-        this_target_batch_depth = self.affine_normalize(this_target_batch_depth)
-        batch_depth = self.affine_normalize(batch_depth)
 
         # 可视化输入rgb是否有问题+验证normalizer是否学到正确参数
         # rgb_data = nobs['head_cam'][0,0,:,:,:]
@@ -306,15 +300,15 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # plt.close()
 
         # 检查depth anything的gt和模型输出
-        batch_depth_sample = batch_depth[0,:,:]
-        batch_depth_sample = (batch_depth_sample).detach().cpu().numpy()
-        vmin, vmax = np.percentile(batch_depth_sample, [5, 95])  # 去掉极端值以提升可视化效果
-        plt.figure(figsize=(8, 6))
-        plt.imshow(batch_depth_sample, cmap='viridis')  # 选择合适的颜色映射
-        plt.colorbar(label="Depth Value")  # 显示颜色条
-        plt.axis("off")
-        plt.savefig("./test_depth/batch_depth.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
-        plt.close()
+        # batch_depth_sample = batch_depth[0,:,:]
+        # batch_depth_sample = (batch_depth_sample).detach().cpu().numpy()
+        # vmin, vmax = np.percentile(batch_depth_sample, [5, 95])  # 去掉极端值以提升可视化效果
+        # plt.figure(figsize=(8, 6))
+        # plt.imshow(batch_depth_sample, cmap='viridis')  # 选择合适的颜色映射
+        # plt.colorbar(label="Depth Value")  # 显示颜色条
+        # plt.axis("off")
+        # plt.savefig("./test_depth/batch_depth.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+        # plt.close()
 
         # target_depth_sample = this_target_batch_depth[0,:,:]
         # target_depth_sample = (target_depth_sample).detach().cpu().numpy()
@@ -328,23 +322,24 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # plt.close()
         # assert False
         
-        depth_loss = F.mse_loss(batch_depth, this_target_batch_depth, reduction='none')
-        depth_loss = reduce(depth_loss, 'b ... -> b (...)', 'mean')
+        # depth_loss = F.mse_loss(batch_depth, this_target_batch_depth, reduction='none')
+        # depth_loss = reduce(depth_loss, 'b ... -> b (...)', 'mean')
         
         loss = loss.mean()
-        depth_loss = depth_loss.mean()
+        # depth_loss = depth_loss.mean()
 
-        initial_lambda = 0.1
-        decay_factor = 0.99  # 逐渐降低 depth loss 影响
-        lambda_depth = initial_lambda * (decay_factor ** epoch)
+        # initial_lambda = 0.1
+        # decay_factor = 0.99  # 逐渐降低 depth loss 影响
+        # lambda_depth = initial_lambda * (decay_factor ** epoch)
 
-        # 归一化 depth loss
-        depth_loss = depth_loss / (depth_loss.detach().mean() + 1e-6)
+        # # 归一化 depth loss
+        # depth_loss = depth_loss / (depth_loss.detach().mean() + 1e-6)
 
-        # 计算总损失
-        tot_loss = loss + lambda_depth * depth_loss
-        # print("depth_loss:",depth_loss)
-        tot_loss = loss + self.lambda_depth * depth_loss
+        # # 计算总损失
+        # tot_loss = loss + lambda_depth * depth_loss
+        # # print("depth_loss:",depth_loss)
+        # tot_loss = loss + self.lambda_depth * depth_loss
+
         # print("loss:",loss)
         # print("depth_loss:",depth_loss)
-        return tot_loss,loss,depth_loss
+        return loss

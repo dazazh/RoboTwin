@@ -22,6 +22,14 @@ from collections import OrderedDict
 from peft import PeftModel
 from peft import LoraConfig, get_peft_model
 
+def colorize_depth(depth, min_val=None, max_val=None):
+    """将深度图转为伪彩色（Jet colormap）"""
+    min_val = depth.min() if min_val is None else min_val
+    max_val = depth.max() if max_val is None else max_val
+    depth_normalized = (depth - min_val) / (max_val - min_val)
+    depth_colored = cv2.applyColorMap((depth_normalized * 255).astype(np.uint8), cv2.COLORMAP_JET)
+    return depth_colored
+
 def update_pretrained_keys(state_dict):
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
@@ -65,7 +73,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         self.dino_encoder = dino_encoder
         ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth"
         checkpoint = update_pretrained_keys(torch.load(ckpt_path, map_location="cpu")['model'])
-        self.dino_encoder.load_state_dict(checkpoint, strict=True)  # `strict=False` 兼容部分加载
+        self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
         # print(self.dino_encoder)
         # LoRA 适配 `qkv` 和 `proj` 层
         # print(self.dino_encoder)
@@ -203,8 +211,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
-                depth, dino_feature = self.dino_encoder(img)
                 feature = self.key_model_map[key](img)
+                # img = img.permute(0, 2, 3, 1)
+                depth, dino_feature = self.dino_encoder(img)
                 feature = torch.cat((feature,dino_feature),dim=1)
                 batch_depth.append(depth)
                 features.append(feature)
