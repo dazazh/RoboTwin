@@ -63,9 +63,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         # self.dino_encoder = dino_encoder.from_pretrained("LiheYoung/depth_anything_vits14")
         # self.dino_encoder = DPT_DINOv2_Encoder(encoder='vits', localhub=True).to(self.device)
         self.dino_encoder = dino_encoder
-        ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth"
-        checkpoint = update_pretrained_keys(torch.load(ckpt_path, map_location="cpu")['model'])
-        self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
+        # ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth"
+        # checkpoint = update_pretrained_keys(torch.load(ckpt_path, map_location="cpu")['model'])
+        # self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
         # print(self.dino_encoder)
         # LoRA 适配 `qkv` 和 `proj` 层
         # print(self.dino_encoder)

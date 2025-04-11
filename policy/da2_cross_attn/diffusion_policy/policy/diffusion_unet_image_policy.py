@@ -133,6 +133,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # normalize input
         nobs = self.normalizer.normalize(obs_dict)
         value = next(iter(nobs.values()))
+        nobs = self.normalizer.unnormalize(nobs)
         B, To = value.shape[:2]
         T = self.horizon
         Da = self.action_dim
