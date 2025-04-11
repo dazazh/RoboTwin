@@ -4,7 +4,7 @@ from .utils import *
 import numpy as np
 import sapien
 
-class mug_hanging_easy(Base_task):
+class mug_hanging_transparent(Base_task):
     def setup_demo(self,is_test=False,**kwags):
         super()._init(**kwags)
         self.create_table_and_wall_gray()
@@ -34,7 +34,7 @@ class mug_hanging_easy(Base_task):
             ylim=[-0.05,0.1],
             zlim=[0.79],
             ylim_prop = True,
-            modelname="039_mug",
+            modelname="051_glass_mug",
             rotate_rand=True,
             rotate_lim=[0,1.57,0],
             qpos=[0.707,0.707,0,0],

@@ -132,8 +132,9 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         assert 'past_action' not in obs_dict # not implemented yet
         # normalize input
         nobs = self.normalizer.normalize(obs_dict)
-        value = next(iter(nobs.values()))
         nobs = self.normalizer.unnormalize(nobs)
+        value = next(iter(nobs.values()))
+        
         B, To = value.shape[:2]
         T = self.horizon
         Da = self.action_dim

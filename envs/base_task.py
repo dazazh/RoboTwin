@@ -198,6 +198,28 @@ class Base_task(gym.Env):
             is_static=self.table_static
         )
 
+    def create_table_and_wall_gray(self):
+        # creat wall
+        self.wall = create_box(
+            self.scene,
+            sapien.Pose(p=[0, 1, 1.5]),
+            half_size=[3, 0.6, 1.5],
+            color=(1, 0.9, 0.9), 
+            name='wall',
+        )
+
+        # creat table
+        self.table = create_table(
+            self.scene,
+            sapien.Pose(p=[0, 0, 0.74]),
+            length=1.2,
+            width=0.9,
+            height=0.74,
+            thickness=0.05,
+            color=(0.4, 0.5, 0.5), 
+            is_static=self.table_static
+        )
+
     def load_robot(self, **kwargs):
         """
             load aloha robot urdf file, set root pose and set joints
