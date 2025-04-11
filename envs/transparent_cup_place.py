@@ -3,7 +3,7 @@ from .base_task import Base_task
 from .utils import *
 import sapien
 
-class empty_cup_place(Base_task):
+class transparent_cup_place(Base_task):
     def setup_demo(self,**kwags):
         super()._init(**kwags)
         self.create_table_and_wall_gray()
@@ -28,7 +28,7 @@ class empty_cup_place(Base_task):
                 xlim=[0.15,0.3],
                 ylim=[-0.2,0.05],
                 zlim=[0.8],
-                modelname="022_cup",
+                modelname="052_glass_cup",
                 rotate_rand=False,
                 qpos=[0.707,0.707,0,0],
             )
