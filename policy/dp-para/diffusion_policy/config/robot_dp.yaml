@@ -40,10 +40,10 @@ policy:
       _target_: diffusion_policy.model.vision.model_getter.get_resnet
       name: resnet18
       weights: null
-    resize_shape: null
+    resize_shape: [350,350]
     crop_shape: null
     # constant center crop
-    random_crop: True
+    random_crop: False
     use_group_norm: True
     share_rgb_model: False
     imagenet_norm: True
@@ -97,11 +97,11 @@ training:
   device: "cuda:0"
   seed: 42
   debug: False
-  resume: True
+  resume: False
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
-  num_epochs: 300
+  num_epochs: 900
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
@@ -110,8 +110,8 @@ training:
   # training loop control
   # in epochs
   rollout_every: 50
-  checkpoint_every: 300
-  val_every: 1
+  checkpoint_every: 150
+  val_every: 25
   sample_every: 5
   # steps per epoch
   max_train_steps: null
@@ -120,10 +120,10 @@ training:
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_debug
+  project: diffusion_policy
   resume: True
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  name: dp_para_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null

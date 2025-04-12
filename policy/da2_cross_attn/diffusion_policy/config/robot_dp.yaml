@@ -129,11 +129,11 @@ training:
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_debug
+  project: diffusion_policy
   resume: True
   mode: online
   # name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}_da-loss_fc-project_4para
-  name: da2_cross_attn_4.11_2.49
+  name: da2_cross_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null
