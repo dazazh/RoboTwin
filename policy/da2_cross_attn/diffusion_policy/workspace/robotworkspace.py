@@ -136,7 +136,7 @@ class RobotWorkspace(BaseWorkspace):
 		)
 
         # configure logging
-        WANDB = True
+        WANDB = False
         if WANDB and accelerator.is_main_process:
             wandb_run = wandb.init(
                 dir=str(self.output_dir),

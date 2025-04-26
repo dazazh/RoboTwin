@@ -120,7 +120,7 @@ training:
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy
+  project: cup_place
   resume: True
   mode: online
   name: dp_para_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}

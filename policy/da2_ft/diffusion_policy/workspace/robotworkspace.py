@@ -71,7 +71,7 @@ class RobotWorkspace(BaseWorkspace):
 
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = pathlib.Path("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/checkpoints/tube_grasp_D435_300_0_depth_only/50.ckpt")
+            lastest_ckpt_path = pathlib.Path("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/da2_cross_attn/checkpoints/transparent_cup_place_L515_50_0_normalized/900.ckpt")
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
@@ -136,7 +136,7 @@ class RobotWorkspace(BaseWorkspace):
 		)
 
         # configure logging
-        WANDB = True
+        WANDB = False
         if WANDB and accelerator.is_main_process:
             wandb_run = wandb.init(
                 dir=str(self.output_dir),

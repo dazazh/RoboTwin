@@ -32,6 +32,18 @@ def update_pretrained_keys(state_dict):
         new_state_dict[name] = v
     return new_state_dict
 
+def match_distribution(source, target):
+    """
+    将 source 分布映射到 target 分布。
+    source, target: Tensor (B, C, H, W) 或 (N, D)
+    """
+    s_mean, s_std = source.mean(dim=0), source.std(dim=0)
+    t_mean, t_std = target.mean(dim=0), target.std(dim=0)
+
+    normalized = (source - s_mean) / (s_std + 1e-6)
+    matched = normalized * t_std + t_mean
+    return matched
+
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
             shape_meta: dict,
@@ -63,14 +75,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         # self.dino_encoder = dino_encoder.from_pretrained("LiheYoung/depth_anything_vits14")
         # self.dino_encoder = DPT_DINOv2_Encoder(encoder='vits', localhub=True).to(self.device)
         self.dino_encoder = dino_encoder
-        # ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/Diffusion-Policy-DA(loss)/depth_anything_v2/checkpoint/latest.pth"
+        ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/Depth-Anything-V2/checkpoints/depth_anything_v2_vitb.pth"
+        checkpoint = torch.load(ckpt_path, map_location="cpu")
+        # ckpt_path = "/mnt/workspace/yuhao/depth_encoder_test/Depth-Anything-V2/metric_depth/exp_ft_test_tube/hypersim/latest.pth"
         # checkpoint = update_pretrained_keys(torch.load(ckpt_path, map_location="cpu")['model'])
-        # self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
-        # print(self.dino_encoder)
-        # LoRA 适配 `qkv` 和 `proj` 层
-        # print(self.dino_encoder)
-        # self.dino_encoder.float()
-        # handle sharing vision backbone
+        self.dino_encoder.load_state_dict(checkpoint, strict=False)  # `strict=False` 兼容部分加载
         if share_rgb_model:
             assert isinstance(rgb_model, nn.Module)
             key_model_map['rgb'] = rgb_model
@@ -204,6 +213,13 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 img = self.key_transform_map[key](img)
                 dino_feature = self.dino_encoder(img)
                 feature = self.key_model_map[key](img)
+                dino_feature = match_distribution(source=dino_feature,target=feature)
+                # print("dino_feature_min:",torch.min(dino_feature))
+                # print("dino_feature_median:",torch.median(dino_feature))
+                # print("dino_feature_max:",torch.max(dino_feature))
+                # print("feature_min:",torch.min(feature))
+                # print("feature_median:",torch.median(feature))
+                # print("feature_max:",torch.max(feature))
                 feature = torch.cat((feature,dino_feature),dim=1)
                 # print("vision_feature:",feature.shape)
                 features.append(feature)

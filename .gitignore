@@ -1,5 +1,6 @@
 aloha_maniskill_sim/
 models/
+!policy/dp_vggt/vggt/models/
 data/
 __pycache__/
 policy/3D-Diffusion-Policy/3D-Diffusion-Policy/data/
@@ -12,6 +13,7 @@ run_all_task.sh
 *.zip
 *.tar
 *.pth
+*.pt
 *.ckpt
 video/*
 eval_video/*
