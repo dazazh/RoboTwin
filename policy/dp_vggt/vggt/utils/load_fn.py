@@ -57,7 +57,7 @@ def load_and_preprocess_images(image_path_list):
         new_width = 518
 
         # Calculate height maintaining aspect ratio, divisible by 14
-        new_height = round(height * (new_width / width) / 14) * 14
+        new_height = 518
 
         # Resize with new dimensions (width, height)
 
@@ -108,4 +108,4 @@ def load_and_preprocess_images(image_path_list):
         if images.dim() == 3:
             images = images.unsqueeze(0)
 
-    return images
+    return images.unsqueeze(0)

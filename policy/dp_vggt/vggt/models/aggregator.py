@@ -229,7 +229,7 @@ class Aggregator(nn.Module):
         if self.patch_start_idx > 0:
             # do not use position embedding for special tokens (camera and register tokens)
             # so set pos to 0 for the special tokens
-            pos = pos + 1
+            pos = (pos + 1).to(images.device)
             pos_special = torch.zeros(B * S, self.patch_start_idx, 2).to(images.device).to(pos.dtype)
             pos = torch.cat([pos_special, pos], dim=1)
 

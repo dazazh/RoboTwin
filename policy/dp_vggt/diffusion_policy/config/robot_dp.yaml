@@ -40,6 +40,8 @@ policy:
       _target_: diffusion_policy.model.vision.model_getter.get_resnet
       name: resnet18
       weights: null
+    vggt_model:
+      _target_: vggt.models.vggt.VGGT
     resize_shape: [350,350]
     crop_shape: null
     # constant center crop
@@ -73,14 +75,14 @@ ema:
   max_value: 0.9999
 
 dataloader:
-  batch_size: 128
+  batch_size: 32
   num_workers: 0
   shuffle: True
   pin_memory: True
   persistent_workers: False
 
 val_dataloader:
-  batch_size: 128
+  batch_size: 32
   num_workers: 0
   shuffle: False
   pin_memory: True
@@ -151,4 +153,5 @@ hydra:
     subdir: ${hydra.job.num}
 
 head_camera_type: null
+front_camera_type: null
 expert_data_num: null

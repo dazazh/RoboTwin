@@ -21,7 +21,8 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             share_rgb_model: bool=False,
             # renormalize rgb input with imagenet normalization
             # assuming input in [0,1]
-            imagenet_norm: bool=False
+            imagenet_norm: bool=False,
+            vggt_model: nn.Module=None
         ):
         """
         Assumes rgb input: B,C,H,W
@@ -116,6 +117,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
 
+        # Initialize vggt_model and ensure it follows device
+        self.vggt_model = vggt_model
+        ckpt = torch.load('/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/vggt/checkpoints/original_model.pt')
+        self.vggt_model.load_state_dict(ckpt,strict=False)
+
         self.shape_meta = shape_meta
         self.key_model_map = key_model_map
         self.key_transform_map = key_transform_map
@@ -137,7 +143,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == self.key_shape_map[key]
+                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
                 imgs.append(img)
             # (N*B,C,H,W)
@@ -153,16 +159,25 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             features.append(feature)
         else:
             # run each rgb obs to independent models
+            vggt_img = []
             for key in self.rgb_keys:
                 img = obs_dict[key]
                 if batch_size is None:
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == self.key_shape_map[key]
+                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
-                feature = self.key_model_map[key](img)
-                features.append(feature)
+                # if key == "head_cam":
+                #     feature = self.key_model_map[key](img)
+                #     features.append(feature)
+                vggt_img.append(img)
+            
+            # 确保所有张量都在正确的设备上
+            vggt_img = torch.stack(vggt_img, dim=1)
+            
+            vggt_feature = self.vggt_model(vggt_img)
+            features.append(vggt_feature)
         
         # process lowdim input
         for key in self.low_dim_keys:

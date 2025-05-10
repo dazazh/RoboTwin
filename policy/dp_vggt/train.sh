@@ -1,6 +1,7 @@
 # 
 task_name=${1}
 head_camera_type=${2}
+front_camera_type=D435
 expert_data_num=${3}
 seed=${4}
 gpu_id=${5}
@@ -53,6 +54,7 @@ accelerate launch --main_process_port 29503 train.py --config-name=${config_name
                             exp_name=${exp_name} \
                             logging.mode=${wandb_mode} \
                             head_camera_type=${head_camera_type} \
+                            front_camera_type="D435"\
                             expert_data_num=${expert_data_num}
                             # checkpoint.save_ckpt=${save_ckpt}
-                            # hydra.run.dir=${run_dir} \
+                            # hydra.run.dir=${run_dir}

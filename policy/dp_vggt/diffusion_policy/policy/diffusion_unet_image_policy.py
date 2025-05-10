@@ -127,7 +127,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         """
         assert 'past_action' not in obs_dict # not implemented yet
         # normalize input
-        nobs = self.normalizer.normalize(obs_dict)
+        _nobs = self.normalizer.normalize(obs_dict)
+        nobs = self.normalizer.unnormalize(_nobs)
         value = next(iter(nobs.values()))
         B, To = value.shape[:2]
         T = self.horizon
@@ -192,7 +193,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
     def compute_loss(self, batch):
         # normalize input
         assert 'valid_mask' not in batch
-        nobs = self.normalizer.normalize(batch['obs'])
+        _nobs = self.normalizer.normalize(batch['obs'])
+        nobs = self.normalizer.unnormalize(_nobs)
         nactions = self.normalizer['action'].normalize(batch['action'])
         batch_size = nactions.shape[0]
         horizon = nactions.shape[1]
