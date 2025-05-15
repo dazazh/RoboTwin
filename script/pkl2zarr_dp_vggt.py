@@ -21,7 +21,7 @@ def main():
     task_name = args.task_name
     num = args.expert_data_num
     head_camera_type = args.head_camera_type
-    load_dir = f'./data/{task_name}_{head_camera_type}_pkl'
+    load_dir = f'./data/{task_name}_{head_camera_type}_with_embedding_pkl'
     
     total_count = 0
 
@@ -38,6 +38,7 @@ def main():
 
     head_camera_arrays, front_camera_arrays, left_camera_arrays, right_camera_arrays = [], [], [], []
     episode_ends_arrays, action_arrays, state_arrays, joint_action_arrays = [], [], [], []
+    vggt_features_arrays = []
 
     while os.path.isdir(load_dir+f'/episode{current_ep}') and current_ep < num:
         print(f'processing episode: {current_ep + 1} / {num}', end='\r')
@@ -49,12 +50,14 @@ def main():
             
             head_img = data['observation']['head_camera']['rgb']
             front_img = data['observation']['front_camera']['rgb']
+            vggt_features = data['vggt_features']
             action = data['endpose']
             joint_action = data['joint_action']
 
             head_camera_arrays.append(head_img)
             front_camera_arrays.append(front_img)
-            
+            vggt_features_arrays.append(vggt_features)
+
             action_arrays.append(action)
             state_arrays.append(joint_action)
             joint_action_arrays.append(joint_action)
@@ -73,6 +76,7 @@ def main():
     head_camera_arrays = np.array(head_camera_arrays)
     front_camera_arrays = np.array(front_camera_arrays)
     joint_action_arrays = np.array(joint_action_arrays)
+    vggt_features_arrays = np.array(vggt_features_arrays)
 
     head_camera_arrays = np.moveaxis(head_camera_arrays, -1, 1)  # NHWC -> NCHW
     front_camera_arrays = np.moveaxis(front_camera_arrays, -1, 1)  # NHWC -> NCHW
@@ -83,8 +87,11 @@ def main():
     joint_chunk_size = (100, joint_action_arrays.shape[1])
     head_camera_chunk_size = (100, *head_camera_arrays.shape[1:])
     front_camera_chunk_size = (100, *front_camera_arrays.shape[1:])
+    vggt_features_chunk_size = (100, *vggt_features_arrays.shape[1:])
+
     zarr_data.create_dataset('head_camera', data=head_camera_arrays, chunks=head_camera_chunk_size, overwrite=True, compressor=compressor)
     zarr_data.create_dataset('front_camera', data=front_camera_arrays, chunks=front_camera_chunk_size, overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('vggt_features', data=vggt_features_arrays, chunks=vggt_features_chunk_size, overwrite=True, compressor=compressor)
     zarr_data.create_dataset('tcp_action', data=action_arrays, chunks=action_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('state', data=state_arrays, chunks=state_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('action', data=joint_action_arrays, chunks=joint_chunk_size, dtype='float32', overwrite=True, compressor=compressor)
