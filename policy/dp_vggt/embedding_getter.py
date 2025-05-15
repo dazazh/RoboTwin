@@ -7,6 +7,7 @@ from PIL import Image
 from torchvision import transforms as TF
 from tqdm import tqdm
 import argparse
+import matplotlib.pyplot as plt
 
 def load_and_preprocess_images(image_list):
     """
@@ -105,7 +106,34 @@ def load_and_preprocess_images(image_list):
 
     return images.unsqueeze(0)
 
-def process_pkl_with_vggt(pkl_path, output_path, model):
+def visualize_feature_maps(features, output_path):
+    """
+    可视化特征图并保存
+    
+    Args:
+        features (numpy.ndarray): 特征图数组，形状为 [n_features, height, width]
+        output_path (str): 输出文件路径
+    """
+    n_features = features.shape[0]
+    fig, axes = plt.subplots(4, 4, figsize=(20, 20))
+    axes = axes.ravel()
+    
+    for idx in range(n_features):
+        feature_map = features[idx]
+        # 归一化到0-1范围以便可视化
+        feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min())
+        axes[idx].imshow(feature_map, cmap='viridis')
+        axes[idx].set_title(f'Feature Map {idx*16}')
+        axes[idx].axis('off')
+    
+    plt.tight_layout()
+    
+    # 保存特征图可视化结果
+    vis_output_path = output_path.replace('.pkl', '_features.png')
+    plt.savefig(vis_output_path)
+    plt.close()
+
+def process_pkl_with_vggt(pkl_path, output_path, model, should_visualize):
     # 加载pkl文件
     with open(pkl_path, 'rb') as f:
         data = pickle.load(f)
@@ -114,37 +142,29 @@ def process_pkl_with_vggt(pkl_path, output_path, model):
     head_cam = data['observation']['head_camera']['rgb']
     front_cam = data['observation']['front_camera']['rgb']
     
-    # 转换为tensor并预处理
-    # head_cam = torch.from_numpy(head_cam).float()
-    # front_cam = torch.from_numpy(front_cam).float()
-    
-    # # 确保在正确的设备上
     device = next(model.parameters()).device
-    # head_cam = head_cam.to(device)
-    # front_cam = front_cam.to(device)
-    
     images = load_and_preprocess_images([head_cam, front_cam])
     images = images.to(device)
     
     # 获取VGGT的中间层特征
     with torch.no_grad():
-        # 获取aggregator的输出
         aggregated_tokens_list, patch_start_idx = model.aggregator(images)
-        
-        # 获取adapter_head的输出
-        # vggt_features = model.adapter_head(
-        #     aggregated_tokens_list, 
-        #     images=images, 
-        #     patch_start_idx=patch_start_idx
-        # )
+        vggt_features = model.point_head(
+            aggregated_tokens_list, 
+            images=images, 
+            patch_start_idx=patch_start_idx
+        )
     
-    # 将特征转换为numpy
-    aggregated_tokens_list = [t.cpu().numpy() for t in aggregated_tokens_list]
-    patch_start_idx = patch_start_idx
+    # 选择每16张特征图中的一张
+    vggt_features = vggt_features.squeeze(0)
+    selected_features = vggt_features[::16, :, :]  # 从256个通道中每隔16个选一个，得到16个通道
+    data['vggt_features'] = selected_features.cpu().numpy()
+    print("Selected vggt_features shape: ", data['vggt_features'].shape)
     
-    # 更新数据字典
-    data['aggregated_tokens_list'] = aggregated_tokens_list
-    data['patch_start_idx'] = patch_start_idx
+    # 可视化特征图
+    features = selected_features.cpu().numpy()  # 取第一个batch的特征图
+    if should_visualize == 1:
+        visualize_feature_maps(features, output_path)
     
     # 保存更新后的数据
     with open(output_path, 'wb') as f:
@@ -155,6 +175,8 @@ def main():
     parser = argparse.ArgumentParser(description='Process robot data with VGGT embeddings')
     parser.add_argument('--task', type=str, default='transparent_cup_place',
                       help='Task name (e.g., transparent_cup_place)')
+    parser.add_argument('--should_visualize', type=int, default=0,
+                      help='Whether to visualize feature maps')
     args = parser.parse_args()
 
     # 初始化模型
@@ -165,7 +187,7 @@ def main():
     
     # 设置输入输出路径
     base_input_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_pkl"
-    base_output_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_with_embedding_pkl"
+    base_output_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_with_visualize_pkl"
     
     print(f"Processing task: {args.task}")
     print(f"Input directory: {base_input_dir}")
@@ -183,7 +205,7 @@ def main():
         for filename in tqdm(pkl_files, desc=f"Processing {episode_dir}", leave=False):
             input_path = os.path.join(input_episode_dir, filename)
             output_path = os.path.join(output_episode_dir, filename)
-            process_pkl_with_vggt(input_path, output_path, model)
+            process_pkl_with_vggt(input_path, output_path, model, args.should_visualize)
 
 if __name__ == "__main__":
     main()

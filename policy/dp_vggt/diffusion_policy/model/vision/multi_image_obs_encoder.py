@@ -6,6 +6,7 @@ import torchvision
 from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
+import matplotlib.pyplot as plt
 
 
 class MultiImageObsEncoder(ModuleAttrMixin):
@@ -22,16 +23,19 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # renormalize rgb input with imagenet normalization
             # assuming input in [0,1]
             imagenet_norm: bool=False,
-            vggt_model: nn.Module=None
+            vggt_model: nn.Module=None,
+            spatial_reducer: nn.Module=None 
         ):
         """
         Assumes rgb input: B,C,H,W
         Assumes low_dim input: B,D
+        Assumes features input: B,D
         """
         super().__init__()
 
         rgb_keys = list()
         low_dim_keys = list()
+        feature_keys = list()
         key_model_map = nn.ModuleDict()
         key_transform_map = nn.ModuleDict()
         key_shape_map = dict()
@@ -112,10 +116,13 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 key_transform_map[key] = this_transform
             elif type == 'low_dim':
                 low_dim_keys.append(key)
+            elif type == 'features':
+                feature_keys.append(key)
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
         rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
+        feature_keys = sorted(feature_keys)
 
         # Initialize vggt_model and ensure it follows device
         self.vggt_model = vggt_model
@@ -128,7 +135,42 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         self.share_rgb_model = share_rgb_model
         self.rgb_keys = rgb_keys
         self.low_dim_keys = low_dim_keys
+        self.feature_keys = feature_keys
         self.key_shape_map = key_shape_map
+        self.spatial_reducer = spatial_reducer
+        self.visualization_counter = 0
+
+    def visualize_vggt_features(self, features, output_path):
+        """
+        可视化VGGT特征图
+        
+        Args:
+            features (torch.Tensor): 特征图，形状为 [n_features, height, width]
+            output_path (str): 输出文件路径
+        """
+        # 确保特征图在CPU上并转换为numpy数组
+        if isinstance(features, torch.Tensor):
+            features = features.cpu().numpy()
+        
+        # 如果特征图是4D的，取第一个batch
+        if features.ndim == 4:
+            features = features[0]
+        
+        n_features = features.shape[0]
+        fig, axes = plt.subplots(4, 4, figsize=(20, 20))
+        axes = axes.ravel()
+        
+        for idx in range(n_features):
+            feature_map = features[idx]
+            # 归一化到0-1范围以便可视化
+            feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min())
+            axes[idx].imshow(feature_map, cmap='viridis')
+            axes[idx].set_title(f'Feature Map {idx}')
+            axes[idx].axis('off')
+        
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
 
     def forward(self, obs_dict):
         batch_size = None
@@ -168,16 +210,23 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
-                # if key == "head_cam":
-                #     feature = self.key_model_map[key](img)
-                #     features.append(feature)
                 vggt_img.append(img)
             
             # 确保所有张量都在正确的设备上
             vggt_img = torch.stack(vggt_img, dim=1)
-            
-            vggt_feature = self.vggt_model(vggt_img)
-            features.append(vggt_feature)
+            if self.feature_keys != None:
+                vggt_features = obs_dict['vggt_features']
+                # 添加可视化
+                if self.training:  # 只在训练时可视化
+                    self.visualize_vggt_features(
+                        vggt_features, 
+                        f'vggt_features_visualization_{self.visualization_counter}.png'
+                    )
+                    self.visualization_counter += 1
+            else:
+                vggt_features = self.vggt_model(vggt_img)
+            reduced_vggt_features = self.spatial_reducer(vggt_features)
+            features.append(reduced_vggt_features)
         
         # process lowdim input
         for key in self.low_dim_keys:

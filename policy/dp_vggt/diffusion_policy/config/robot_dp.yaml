@@ -42,6 +42,8 @@ policy:
       weights: null
     vggt_model:
       _target_: vggt.models.vggt.VGGT
+    spatial_reducer:
+      _target_: vggt.models.spatial_reducer.SpatialReducer
     resize_shape: [350,350]
     crop_shape: null
     # constant center crop

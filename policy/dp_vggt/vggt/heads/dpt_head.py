@@ -152,35 +152,8 @@ class DPTHead(nn.Module):
         # If frames_chunk_size is not specified or greater than S, process all frames at once
         if frames_chunk_size is None or frames_chunk_size >= S:
             return self._forward_impl(aggregated_tokens_list, images, patch_start_idx)
-
-        # Otherwise, process frames in chunks to manage memory usage
-        assert frames_chunk_size > 0
-
-        # Process frames in batches
-        all_preds = []
-        all_conf = []
-
-        for frames_start_idx in range(0, S, frames_chunk_size):
-            frames_end_idx = min(frames_start_idx + frames_chunk_size, S)
-
-            # Process batch of frames
-            if self.feature_only:
-                chunk_output = self._forward_impl(
-                    aggregated_tokens_list, images, patch_start_idx, frames_start_idx, frames_end_idx
-                )
-                all_preds.append(chunk_output)
-            else:
-                chunk_preds, chunk_conf = self._forward_impl(
-                    aggregated_tokens_list, images, patch_start_idx, frames_start_idx, frames_end_idx
-                )
-                all_preds.append(chunk_preds)
-                all_conf.append(chunk_conf)
-
-        # Concatenate results along the sequence dimension
-        if self.feature_only:
-            return torch.cat(all_preds, dim=1)
         else:
-            return torch.cat(all_preds, dim=1), torch.cat(all_conf, dim=1)
+            assert False, "frames_chunk_size is not supported"
 
     def _forward_impl(
         self,
@@ -246,18 +219,17 @@ class DPTHead(nn.Module):
             align_corners=True,
         )
 
-        if self.pos_embed:
-            out = self._apply_pos_embed(out, W, H)
+        # out = self.scratch.output_conv2(out)
+        
+        # 重新组织维度为 [B, S, C, H, W]
+        out = out.view(B, S, *out.shape[1:])
+        B, S, C, H, W = out.shape
+        print("out.shape: ", out.shape)
+        out = out.reshape(B, S*C, H, W)
+        print("out.shape: ", out.shape)
 
-        if self.feature_only:
-            return out.view(B, S, *out.shape[1:])
+        return out
 
-        out = self.scratch.output_conv2(out)
-        preds, conf = activate_head(out, activation=self.activation, conf_activation=self.conf_activation)
-
-        preds = preds.view(B, S, *preds.shape[1:])
-        conf = conf.view(B, S, *conf.shape[1:])
-        return preds, conf
 
     def _apply_pos_embed(self, x: torch.Tensor, W: int, H: int, ratio: float = 0.1) -> torch.Tensor:
         """

@@ -127,8 +127,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         """
         assert 'past_action' not in obs_dict # not implemented yet
         # normalize input
-        _nobs = self.normalizer.normalize(obs_dict)
-        nobs = self.normalizer.unnormalize(_nobs)
+        nobs = self.normalizer.normalize(obs_dict)
+        # nobs = self.normalizer.unnormalize(_nobs)
         value = next(iter(nobs.values()))
         B, To = value.shape[:2]
         T = self.horizon
@@ -193,8 +193,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
     def compute_loss(self, batch):
         # normalize input
         assert 'valid_mask' not in batch
-        _nobs = self.normalizer.normalize(batch['obs'])
-        nobs = self.normalizer.unnormalize(_nobs)
+        nobs = self.normalizer.normalize(batch['obs'])
+        # nobs = self.normalizer.unnormalize(_nobs)
         nactions = self.normalizer['action'].normalize(batch['action'])
         batch_size = nactions.shape[0]
         horizon = nactions.shape[1]
@@ -208,12 +208,14 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, 
                 lambda x: x[:,:self.n_obs_steps,...].reshape(-1,*x.shape[2:]))
+            # print("this_nobs", this_nobs.keys())
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
         else:
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, lambda x: x.reshape(-1, *x.shape[2:]))
+            # print("this_nobs", this_nobs.keys())
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)

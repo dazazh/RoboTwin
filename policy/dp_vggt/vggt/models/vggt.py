@@ -70,8 +70,8 @@ class VGGT(nn.Module, PyTorchModelHubMixin):
             aggregated_tokens_list, patch_start_idx = self.aggregator(images)
         
             with torch.cuda.amp.autocast(enabled=False):
-                if self.adapter_head is not None:
-                    vggt_features = self.adapter_head(
+                if self.point_head is not None:
+                    vggt_features = self.point_head(
                         aggregated_tokens_list, images=images, patch_start_idx=patch_start_idx
                     )
                     predictions["features"] = vggt_features

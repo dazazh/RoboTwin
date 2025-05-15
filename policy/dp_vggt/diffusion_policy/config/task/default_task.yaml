@@ -12,6 +12,9 @@ shape_meta: &shape_meta
     front_cam:
       shape: *front_image_shape
       type: rgb
+    vggt_features:
+      shape: [16, 518, 518]
+      type: features
     # left_cam:
     #   shape: *image_shape
     #   type: rgb
