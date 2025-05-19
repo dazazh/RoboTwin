@@ -45,7 +45,7 @@ fi
 
 export HYDRA_FULL_ERROR=1 
 export CUDA_VISIBLE_DEVICES=${gpu_id}
-accelerate launch --main_process_port 29503 train.py --config-name=${config_name}.yaml \
+accelerate launch --main_process_port 29502 train.py --config-name=${config_name}.yaml \
                             task.name=${task_name} \
                             task.dataset.zarr_path="data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" \
                             training.debug=$DEBUG \
@@ -55,6 +55,7 @@ accelerate launch --main_process_port 29503 train.py --config-name=${config_name
                             logging.mode=${wandb_mode} \
                             head_camera_type=${head_camera_type} \
                             front_camera_type="D435"\
-                            expert_data_num=${expert_data_num}
+                            expert_data_num=${expert_data_num} 
+                            # > output.log 2>&1
                             # checkpoint.save_ckpt=${save_ckpt}
                             # hydra.run.dir=${run_dir}

@@ -27,6 +27,9 @@ from diffusion_policy.model.diffusion.ema_model import EMAModel
 from diffusion_policy.model.common.lr_scheduler import get_scheduler
 from accelerate import Accelerator
 import wandb
+import pathlib
+import dill
+os.environ["WANDB_API_KEY"] = "4a9d5bab6e579276db7f009dfeaeb718108ba031"
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
@@ -56,6 +59,7 @@ class RobotWorkspace(BaseWorkspace):
         # configure training state
         self.global_step = 0
         self.epoch = 0
+        self.load_checkpoint_missing_vggt(path="/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/checkpoints/transparent_cup_place_L515_50_0/0.ckpt")
 
     def run(self):
         cfg = copy.deepcopy(self.cfg)
@@ -66,7 +70,7 @@ class RobotWorkspace(BaseWorkspace):
 
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = self.get_checkpoint_path()
+            lastest_ckpt_path = pathlib.Path("/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/checkpoints/transparent_cup_place_L515_50_0/0.ckpt")
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
@@ -118,8 +122,9 @@ class RobotWorkspace(BaseWorkspace):
         # assert isinstance(env_runner, BaseImageRunner)
         env_runner = None
 
-        WANDB = False
+        WANDB = True
         if WANDB and accelerator.is_main_process:
+            wandb.login()
             wandb_run = wandb.init(
                 dir=str(self.output_dir),
                 config=OmegaConf.to_container(cfg, resolve=True),
@@ -204,7 +209,7 @@ class RobotWorkspace(BaseWorkspace):
                         if not is_last_batch:
                             # log of last step is combined with validation and rollout
                             json_logger.log(step_log)
-                            self.global_step += 1
+                            self.global_step += accelerator.num_processes
 
                         if (cfg.training.max_train_steps is not None) \
                             and batch_idx >= (cfg.training.max_train_steps-1):
@@ -281,9 +286,35 @@ class RobotWorkspace(BaseWorkspace):
                 json_logger.log(step_log)
                 if WANDB and accelerator.is_main_process:
                     wandb_run.log(step_log, step=self.global_step)
-                self.global_step += 1
+                self.global_step += accelerator.num_processes
                 self.epoch += 1
 
+    def load_checkpoint_missing_vggt(self, path=None, tag='latest', **kwargs):
+        if path is None:
+            path = self.get_checkpoint_path(tag=tag)
+        else:
+            path = pathlib.Path(path)
+        
+        # 加载checkpoint
+        payload = torch.load(path.open('rb'), pickle_module=dill, **kwargs)
+        # print("payload.keys()", payload.keys())
+        
+        # 获取当前模型参数
+        model_dict = self.model.state_dict()
+        
+        # 从state_dicts中加载模型参数
+        if 'state_dicts' in payload:
+            # print("payload['state_dicts'].keys()", payload['state_dicts'].keys())
+            if 'model' in payload['state_dicts']:
+                pretrained_dict = {k: v for k, v in payload['state_dicts']['model'].items() 
+                                  if k in model_dict and model_dict[k].shape == v.shape}
+                model_dict.update(pretrained_dict)
+                # print("model_dict.keys()", model_dict.keys())
+                # print("self.model.keys()", self.model)
+                # 之所以strict可以为True，是因为update后，保留了原模型没有的参数，将model和checkpoint中共有的参数替换为了checkpoint中的权重
+                self.model.load_state_dict(model_dict, strict=True) 
+        
+        return payload
 
 class BatchSampler:
     def __init__(self, data_size: int, batch_size: int, shuffle: bool = False, seed: int = 0, drop_last: bool = True):

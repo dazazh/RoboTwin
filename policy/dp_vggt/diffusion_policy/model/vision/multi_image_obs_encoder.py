@@ -217,12 +217,12 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             if self.feature_keys != None:
                 vggt_features = obs_dict['vggt_features']
                 # 添加可视化
-                if self.training:  # 只在训练时可视化
-                    self.visualize_vggt_features(
-                        vggt_features, 
-                        f'vggt_features_visualization_{self.visualization_counter}.png'
-                    )
-                    self.visualization_counter += 1
+                # if self.training:  # 只在训练时可视化
+                #     self.visualize_vggt_features(
+                #         vggt_features, 
+                #         f'vggt_features_visualization_{self.visualization_counter}.png'
+                #     )
+                #     self.visualization_counter += 1
             else:
                 vggt_features = self.vggt_model(vggt_img)
             reduced_vggt_features = self.spatial_reducer(vggt_features)

@@ -155,11 +155,12 @@ def process_pkl_with_vggt(pkl_path, output_path, model, should_visualize):
             patch_start_idx=patch_start_idx
         )
     
-    # 选择每16张特征图中的一张
-    vggt_features = vggt_features.squeeze(0)
-    selected_features = vggt_features[::16, :, :]  # 从256个通道中每隔16个选一个，得到16个通道
+    # 将256个通道每16个连续通道进行平均池化，得到16个通道
+    vggt_features = vggt_features.squeeze(0)  # 去掉batch维度
+    vggt_features = vggt_features.view(16, 16, vggt_features.shape[-2], vggt_features.shape[-1])  # 重组为(16组, 每组16通道, H, W)
+    selected_features = vggt_features.mean(dim=1)  # 在每组内进行平均池化
     data['vggt_features'] = selected_features.cpu().numpy()
-    print("Selected vggt_features shape: ", data['vggt_features'].shape)
+    print("Pooled vggt_features shape: ", data['vggt_features'].shape)
     
     # 可视化特征图
     features = selected_features.cpu().numpy()  # 取第一个batch的特征图
@@ -187,7 +188,7 @@ def main():
     
     # 设置输入输出路径
     base_input_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_pkl"
-    base_output_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_with_visualize_pkl"
+    base_output_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_with_embedding_pkl"
     
     print(f"Processing task: {args.task}")
     print(f"Input directory: {base_input_dir}")

@@ -114,7 +114,7 @@ training:
   # training loop control
   # in epochs
   rollout_every: 50
-  checkpoint_every: 150
+  checkpoint_every: 10
   val_every: 25
   sample_every: 5
   # steps per epoch
@@ -127,7 +127,7 @@ logging:
   project: cup_place
   resume: True
   mode: online
-  name: dp_para_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}
+  name: dp_vggt_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null
