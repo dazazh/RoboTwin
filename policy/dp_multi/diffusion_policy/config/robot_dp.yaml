@@ -123,7 +123,7 @@ logging:
   project: cup_place
   resume: True
   mode: online
-  name: dp_${name}_${task_name}
+  name: dp_multi_${name}_${task_name}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null
@@ -151,4 +151,5 @@ hydra:
     subdir: ${hydra.job.num}
 
 head_camera_type: null
+front_camera_type: null
 expert_data_num: null

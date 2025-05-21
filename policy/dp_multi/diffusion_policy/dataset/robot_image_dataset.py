@@ -93,14 +93,14 @@ class RobotImageDataset(BaseImageDataset):
     def _sample_to_data(self, sample):
         agent_pos = sample['state'].astype(np.float32) # (agent_posx2, block_posex3)
         head_cam = np.moveaxis(sample['head_camera'],-1,1)/255
-        # front_cam = np.moveaxis(sample['front_camera'],-1,1)/255
+        front_cam = np.moveaxis(sample['front_camera'],-1,1)/255
         # left_cam = np.moveaxis(sample['left_camera'],-1,1)/255
         # right_cam = np.moveaxis(sample['right_camera'],-1,1)/255
 
         data = {
             'obs': {
                 'head_cam': head_cam, # T, 3, H, W
-                # 'front_cam': front_cam, # T, 3, H, W
+                'front_cam': front_cam, # T, 3, H, W
                 # 'left_cam': left_cam, # T, 3, H, W
                 # 'right_cam': right_cam, # T, 3, H, W
                 'agent_pos': agent_pos, # T, D
