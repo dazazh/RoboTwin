@@ -120,10 +120,10 @@ training:
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_debug
+  project: cup_place
   resume: True
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  name: dp_${name}_${task_name}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null

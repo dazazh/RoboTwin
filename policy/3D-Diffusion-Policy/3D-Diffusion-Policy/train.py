@@ -81,7 +81,7 @@ class TrainDP3Workspace:
     def run(self):
         cfg = copy.deepcopy(self.cfg)
 
-        WANDB = True
+        WANDB = False
         wandb.login()
         
         if cfg.training.debug:
