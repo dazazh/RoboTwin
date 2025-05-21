@@ -275,7 +275,7 @@ class RobotWorkspace(BaseWorkspace):
                     accelerator.wait_for_everyone()
                     if accelerator.is_main_process:
                         save_name = pathlib.Path(self.cfg.task.dataset.zarr_path).stem
-                        self.save_checkpoint(f'checkpoints/{save_name}_{seed}/{self.epoch + 1}.ckpt') # TODO
+                        self.save_checkpoint(f'/cpfs04/shared/muyao/yuhao/dp_vggt/checkpoints/{save_name}_{seed}/{self.epoch + 1}.ckpt') # TODO
                     accelerator.wait_for_everyone()
 
                 # ========= eval end for this epoch ==========

@@ -54,7 +54,7 @@ accelerate launch --main_process_port 29502 train.py --config-name=${config_name
                             exp_name=${exp_name} \
                             logging.mode=${wandb_mode} \
                             head_camera_type=${head_camera_type} \
-                            front_camera_type="D435"\
+                            front_camera_type="L515"\
                             expert_data_num=${expert_data_num} 
                             # > output.log 2>&1
                             # checkpoint.save_ckpt=${save_ckpt}

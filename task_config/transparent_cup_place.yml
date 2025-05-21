@@ -6,9 +6,9 @@ collect_data: true
 save_path: ./data
 dual_arm: true
 st_episode: 0
-head_camera_type: D435
+head_camera_type: L515
 wrist_camera_type: D435
-front_camera_type: D435
+front_camera_type: L515
 pcd_crop: true
 pcd_down_sample_num: 1024
 episode_num: 50
