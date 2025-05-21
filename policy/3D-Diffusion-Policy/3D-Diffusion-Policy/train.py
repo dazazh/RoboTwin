@@ -41,6 +41,7 @@ from diffusion_policy_3d.model.diffusion.ema_model import EMAModel
 from diffusion_policy_3d.model.common.lr_scheduler import get_scheduler
 import pdb
 
+os.environ["WANDB_API_KEY"] = "4a9d5bab6e579276db7f009dfeaeb718108ba031"
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
 class TrainDP3Workspace:
@@ -81,6 +82,7 @@ class TrainDP3Workspace:
         cfg = copy.deepcopy(self.cfg)
 
         WANDB = True
+        wandb.login()
         
         if cfg.training.debug:
             cfg.training.num_epochs = 100
