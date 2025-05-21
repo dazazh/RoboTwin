@@ -120,7 +120,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 feature_keys.append(key)
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
-        rgb_keys = sorted(rgb_keys)
+        # rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
         feature_keys = sorted(feature_keys)
 
@@ -172,7 +172,13 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         plt.savefig(output_path)
         plt.close()
 
-    def forward(self, obs_dict):
+    def forward(self, obs_dict, original_obs_dict=None):
+        if original_obs_dict is None:
+            return self._forward_train(obs_dict)
+        else:
+            return self._forward_inference(obs_dict, original_obs_dict)
+
+    def _forward_train(self, obs_dict):
         batch_size = None
         features = list()
         # process rgb input
@@ -210,21 +216,90 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     assert batch_size == img.shape[0]
                 assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
+                feature = self.key_model_map[key](img)
+                features.append(feature)
                 vggt_img.append(img)
             
             # 确保所有张量都在正确的设备上
             vggt_img = torch.stack(vggt_img, dim=1)
-            if self.feature_keys != None:
-                vggt_features = obs_dict['vggt_features']
-                # 添加可视化
-                # if self.training:  # 只在训练时可视化
-                #     self.visualize_vggt_features(
-                #         vggt_features, 
-                #         f'vggt_features_visualization_{self.visualization_counter}.png'
-                #     )
-                #     self.visualization_counter += 1
+            vggt_features = obs_dict['vggt_features']
+            # 添加可视化
+            # if self.training:  # 只在训练时可视化
+            #     self.visualize_vggt_features(
+            #         vggt_features, 
+            #         f'vggt_features_visualization_{self.visualization_counter}.png'
+            #     )
+            #     self.visualization_counter += 1
+            reduced_vggt_features = self.spatial_reducer(vggt_features)
+            features.append(reduced_vggt_features)
+        
+        # process lowdim input
+        for key in self.low_dim_keys:
+            data = obs_dict[key]
+            if batch_size is None:
+                batch_size = data.shape[0]
             else:
-                vggt_features = self.vggt_model(vggt_img)
+                assert batch_size == data.shape[0]
+            assert data.shape[1:] == self.key_shape_map[key]
+            features.append(data)
+        
+        # concatenate all features
+        result = torch.cat(features, dim=-1)
+        return result
+
+    def _forward_inference(self, obs_dict, original_obs_dict):
+        batch_size = None
+        features = list()
+        # process rgb input
+        if self.share_rgb_model:
+            # pass all rgb obs to rgb model
+            imgs = list()
+            for key in self.rgb_keys:
+                img = obs_dict[key]
+                if batch_size is None:
+                    batch_size = img.shape[0]
+                else:
+                    assert batch_size == img.shape[0]
+                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                img = self.key_transform_map[key](img)
+                imgs.append(img)
+            # (N*B,C,H,W)
+            imgs = torch.cat(imgs, dim=0)
+            # (N*B,D)
+            feature = self.key_model_map['rgb'](imgs)
+            # (N,B,D)
+            feature = feature.reshape(-1,batch_size,*feature.shape[1:])
+            # (B,N,D)
+            feature = torch.moveaxis(feature,0,1)
+            # (B,N*D)
+            feature = feature.reshape(batch_size,-1)
+            features.append(feature)
+        else:
+            # run each rgb obs to independent models
+            vggt_img = []
+            for key in self.rgb_keys:
+                img = obs_dict[key]
+                original_img = original_obs_dict[key]
+                if batch_size is None:
+                    batch_size = img.shape[0]
+                else:
+                    assert batch_size == img.shape[0]
+                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                img = self.key_transform_map[key](img)
+                feature = self.key_model_map[key](img)
+                features.append(feature)
+                vggt_img.append(original_img)
+            
+            # 确保所有张量都在正确的设备上
+            vggt_img = torch.stack(vggt_img, dim=1)
+            vggt_features = self.vggt_model(vggt_img)
+            # 添加可视化
+            # if self.training:  # 只在训练时可视化
+            #     self.visualize_vggt_features(
+            #         vggt_features, 
+            #         f'vggt_features_visualization_{self.visualization_counter}.png'
+            #     )
+            #     self.visualization_counter += 1
             reduced_vggt_features = self.spatial_reducer(vggt_features)
             features.append(reduced_vggt_features)
         
