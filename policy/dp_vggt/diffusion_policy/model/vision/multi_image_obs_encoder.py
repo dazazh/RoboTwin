@@ -218,10 +218,10 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             vggt_features = vggt_features.view(-1 ,16, 16, vggt_features.shape[-2], vggt_features.shape[-1])  # 重组为(16组, 每组16通道, H, W)
             vggt_features = vggt_features.mean(dim=2)  # 在每组内进行平均池化
             # if self.training:  # 只在训练时可视化
-            self.visualize_vggt_features(
-                vggt_features[0], 
-                f'vggt_features_visualization_{self.visualization_counter}.png'
-            )
+            # self.visualize_vggt_features(
+            #     vggt_features[0], 
+            #     f'vggt_features_visualization_{self.visualization_counter}.png'
+            # )
             self.visualization_counter += 1
             reduced_vggt_features = self.spatial_reducer(vggt_features)
             features.append(reduced_vggt_features)
