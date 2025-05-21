@@ -62,7 +62,7 @@ class transparent_cup_place(Base_task):
                 xlim=[-0.3,-0.15],
                 ylim=[-0.2,0.05],
                 zlim=[0.8],
-                modelname="022_cup",
+                modelname="052_glass_cup",
                 rotate_rand=False,
                 qpos=[0.707,0.707,0,0],
             )

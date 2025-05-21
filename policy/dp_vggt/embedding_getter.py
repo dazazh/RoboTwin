@@ -141,7 +141,8 @@ def process_pkl_with_vggt(pkl_path, output_path, model, should_visualize):
     # 获取图像数据
     head_cam = data['observation']['head_camera']['rgb']
     front_cam = data['observation']['front_camera']['rgb']
-    
+    print("head_cam.shape",head_cam.shape)
+    print("front_cam.shape",front_cam.shape)
     device = next(model.parameters()).device
     images = load_and_preprocess_images([head_cam, front_cam])
     images = images.to(device)
@@ -183,12 +184,12 @@ def main():
     # 初始化模型
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = VGGT().to(device)
-    ckpt = torch.load('/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/vggt/checkpoints/original_model.pt')
+    ckpt = torch.load('/data/user/xcs/yuhao/3d-aware/RoboTwin/policy/dp_vggt/vggt/checkpoints/original_model.pt')
     model.load_state_dict(ckpt, strict=False)
     
     # 设置输入输出路径
-    base_input_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_pkl"
-    base_output_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_with_embedding_pkl"
+    base_input_dir = f"/data/user/xcs/yuhao/3d-aware/RoboTwin/data/{args.task}_L515_pkl"
+    base_output_dir = f"/data/user/xcs/yuhao/3d-aware/RoboTwin/data/{args.task}_L515_with_embedding_pkl"
     
     print(f"Processing task: {args.task}")
     print(f"Input directory: {base_input_dir}")

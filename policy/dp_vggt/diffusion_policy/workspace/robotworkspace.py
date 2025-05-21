@@ -59,7 +59,7 @@ class RobotWorkspace(BaseWorkspace):
         # configure training state
         self.global_step = 0
         self.epoch = 0
-        self.load_checkpoint_missing_vggt(path="/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/checkpoints/transparent_cup_place_L515_50_0/0.ckpt")
+        # self.load_checkpoint_missing_vggt(path="/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/checkpoints/transparent_cup_place_L515_50_0/0.ckpt")
 
     def run(self):
         cfg = copy.deepcopy(self.cfg)

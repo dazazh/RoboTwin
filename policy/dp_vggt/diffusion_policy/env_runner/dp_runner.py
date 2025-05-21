@@ -5,6 +5,16 @@ import hydra
 from pathlib import Path
 from collections import deque
 
+import pickle
+import os
+from vggt.models.vggt import VGGT
+import numpy as np
+from PIL import Image
+from torchvision import transforms as TF
+from tqdm import tqdm
+import argparse
+import matplotlib.pyplot as plt
+
 import yaml
 from datetime import datetime
 import importlib
@@ -12,6 +22,94 @@ import dill
 from argparse import ArgumentParser
 from diffusion_policy.common.pytorch_util import dict_apply
 from diffusion_policy.policy.base_image_policy import BaseImagePolicy
+
+def load_and_preprocess_images(image_list):
+    """
+    A quick start function to preprocess numpy images for model input.
+    This assumes the images should have the same shape for easier batching, but our model can also work well with different shapes.
+
+    Args:
+        image_list (list): List of numpy arrays representing images with shape (H, W, C)
+
+    Returns:
+        torch.Tensor: Batched tensor of preprocessed images with shape (N, 3, H, W)
+
+    Raises:
+        ValueError: If the input list is empty
+
+    Notes:
+        - Images with different dimensions will be padded with white (value=1.0)
+        - A warning is printed when images have different shapes
+        - The function ensures width=518px while maintaining aspect ratio
+        - Height is adjusted to be divisible by 14 for compatibility with model requirements
+    """
+    # Check for empty list
+    if len(image_list) == 0:
+        raise ValueError("At least 1 image is required")
+
+    images = []
+    shapes = set()
+    to_tensor = TF.ToTensor()
+
+    # First process all images and collect their shapes
+    for img in image_list:
+        # Convert numpy array to PIL Image
+        img = Image.fromarray(img)
+
+        # If there's an alpha channel, blend onto white background:
+        if img.mode == "RGBA":
+            # Create white background
+            background = Image.new("RGBA", img.size, (255, 255, 255, 255))
+            # Alpha composite onto the white background
+            img = Image.alpha_composite(background, img)
+
+        # Now convert to "RGB" (this step assigns white for transparent areas)
+        img = img.convert("RGB")
+
+        width, height = img.size
+        new_width = 518
+
+        # Calculate height maintaining aspect ratio, divisible by 14
+        new_height = 518
+
+        # Resize with new dimensions (width, height)
+        img = img.resize((new_width, new_height), Image.Resampling.BICUBIC)
+        img = to_tensor(img)  # Convert to tensor (0, 1)
+
+        # Center crop height if it's larger than 518
+        if new_height > 518:
+            start_y = (new_height - 518) // 2
+            img = img[:, start_y : start_y + 518, :]
+
+        shapes.add((img.shape[1], img.shape[2]))
+        images.append(img)
+
+    # Check if we have different shapes
+    # In theory our model can also work well with different shapes
+    if len(shapes) > 1:
+        print(f"Warning: Found images with different shapes: {shapes}")
+        # Find maximum dimensions
+        max_height = max(shape[0] for shape in shapes)
+        max_width = max(shape[1] for shape in shapes)
+
+        # Pad images if necessary
+        padded_images = []
+        for img in images:
+            h_padding = max_height - img.shape[1]
+            w_padding = max_width - img.shape[2]
+
+            if h_padding > 0 or w_padding > 0:
+                pad_top = h_padding // 2
+                pad_bottom = h_padding - pad_top
+                pad_left = w_padding // 2
+                pad_right = w_padding - pad_left
+
+                img = torch.nn.functional.pad(
+                    img, (pad_left, pad_right, pad_top, pad_bottom), mode="constant", value=1.0
+                )
+            padded_images.append(img)
+        images = padded_images
+    return images
 
 
 class DPRunner:
@@ -87,8 +185,33 @@ class DPRunner:
 
         # create obs dict
         np_obs_dict = dict(obs)
+        # 分离VGGT相关的字段
+        vggt_obs_dict = {}
+        vggt_obs_dict['head_cam'] = np_obs_dict.pop('vggt_head_cam')
+        vggt_obs_dict['front_cam'] = np_obs_dict.pop('vggt_front_cam')
+        
         # device transfer
         obs_dict = dict_apply(np_obs_dict, lambda x: torch.from_numpy(x).to(device=device))
+        
+        # 预处理VGGT图像
+        if vggt_obs_dict:
+            processed_vggt_obs = {'head_cam': [], 'front_cam': []}
+            for i in range(3):
+                # 处理每个时间步的图像
+                processed_images = load_and_preprocess_images([
+                    vggt_obs_dict['head_cam'][i], 
+                    vggt_obs_dict['front_cam'][i]
+                ])
+                # 将处理后的图像分别存储
+                processed_vggt_obs['head_cam'].append(processed_images[0])
+                processed_vggt_obs['front_cam'].append(processed_images[1])
+            # 将列表转换为张量
+            processed_vggt_obs = {
+                'head_cam': torch.stack(processed_vggt_obs['head_cam']),
+                'front_cam': torch.stack(processed_vggt_obs['front_cam'])
+            }
+            vggt_obs_dict = processed_vggt_obs
+        
         # run policy
         with torch.no_grad():
             obs_dict_input = {}  # flush unused keys
@@ -97,8 +220,11 @@ class DPRunner:
             obs_dict_input['left_cam'] = obs_dict['left_cam'].unsqueeze(0)
             obs_dict_input['right_cam'] = obs_dict['right_cam'].unsqueeze(0)
             obs_dict_input['agent_pos'] = obs_dict['agent_pos'].unsqueeze(0)
+            vggt_obs_dict_input = {}
+            vggt_obs_dict_input['head_cam'] = vggt_obs_dict['head_cam'].unsqueeze(0)
+            vggt_obs_dict_input['front_cam'] = vggt_obs_dict['front_cam'].unsqueeze(0)
             
-            action_dict = policy.predict_action(obs_dict_input)
+            action_dict = policy.predict_action(obs_dict_input,vggt_obs_dict_input)
 
         # device_transfer
         np_action_dict = dict_apply(action_dict, lambda x: x.detach().to('cpu').numpy())

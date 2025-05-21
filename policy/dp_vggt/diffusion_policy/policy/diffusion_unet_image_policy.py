@@ -4,6 +4,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, reduce
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+import pickle
+import os
+from vggt.models.vggt import VGGT
+import numpy as np
+from PIL import Image
+from torchvision import transforms as TF
+from tqdm import tqdm
+import argparse
+import matplotlib.pyplot as plt
 
 from diffusion_policy.model.common.normalizer import LinearNormalizer
 from diffusion_policy.policy.base_image_policy import BaseImagePolicy
@@ -11,6 +20,94 @@ from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from diffusion_policy.common.pytorch_util import dict_apply
+
+def load_and_preprocess_images(image_list):
+    """
+    A quick start function to preprocess numpy images for model input.
+    This assumes the images should have the same shape for easier batching, but our model can also work well with different shapes.
+
+    Args:
+        image_list (list): List of numpy arrays representing images with shape (H, W, C)
+
+    Returns:
+        torch.Tensor: Batched tensor of preprocessed images with shape (N, 3, H, W)
+
+    Raises:
+        ValueError: If the input list is empty
+
+    Notes:
+        - Images with different dimensions will be padded with white (value=1.0)
+        - A warning is printed when images have different shapes
+        - The function ensures width=518px while maintaining aspect ratio
+        - Height is adjusted to be divisible by 14 for compatibility with model requirements
+    """
+    # Check for empty list
+    if len(image_list) == 0:
+        raise ValueError("At least 1 image is required")
+
+    images = []
+    shapes = set()
+    to_tensor = TF.ToTensor()
+
+    # First process all images and collect their shapes
+    for img in image_list:
+        # Convert numpy array to PIL Image
+        img = Image.fromarray(img)
+
+        # If there's an alpha channel, blend onto white background:
+        if img.mode == "RGBA":
+            # Create white background
+            background = Image.new("RGBA", img.size, (255, 255, 255, 255))
+            # Alpha composite onto the white background
+            img = Image.alpha_composite(background, img)
+
+        # Now convert to "RGB" (this step assigns white for transparent areas)
+        img = img.convert("RGB")
+
+        width, height = img.size
+        new_width = 518
+
+        # Calculate height maintaining aspect ratio, divisible by 14
+        new_height = 518
+
+        # Resize with new dimensions (width, height)
+        img = img.resize((new_width, new_height), Image.Resampling.BICUBIC)
+        img = to_tensor(img)  # Convert to tensor (0, 1)
+
+        # Center crop height if it's larger than 518
+        if new_height > 518:
+            start_y = (new_height - 518) // 2
+            img = img[:, start_y : start_y + 518, :]
+
+        shapes.add((img.shape[1], img.shape[2]))
+        images.append(img)
+
+    # Check if we have different shapes
+    # In theory our model can also work well with different shapes
+    if len(shapes) > 1:
+        print(f"Warning: Found images with different shapes: {shapes}")
+        # Find maximum dimensions
+        max_height = max(shape[0] for shape in shapes)
+        max_width = max(shape[1] for shape in shapes)
+
+        # Pad images if necessary
+        padded_images = []
+        for img in images:
+            h_padding = max_height - img.shape[1]
+            w_padding = max_width - img.shape[2]
+
+            if h_padding > 0 or w_padding > 0:
+                pad_top = h_padding // 2
+                pad_bottom = h_padding - pad_top
+                pad_left = w_padding // 2
+                pad_right = w_padding - pad_left
+
+                img = torch.nn.functional.pad(
+                    img, (pad_left, pad_right, pad_top, pad_bottom), mode="constant", value=1.0
+                )
+            padded_images.append(img)
+        images = padded_images
+    return images
 
 class DiffusionUnetImagePolicy(BaseImagePolicy):
     def __init__(self, 
@@ -120,15 +217,15 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         return trajectory
 
 
-    def predict_action(self, obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def predict_action(self, obs_dict: Dict[str, torch.Tensor], vggt_obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         obs_dict: must include "obs" key
         result: must include "action" key
         """
         assert 'past_action' not in obs_dict # not implemented yet
-        # normalize input
+        # normalize input for policy network
         nobs = self.normalizer.normalize(obs_dict)
-        # nobs = self.normalizer.unnormalize(_nobs)
+        # keep original images for VGGT
         value = next(iter(nobs.values()))
         B, To = value.shape[:2]
         T = self.horizon
@@ -146,7 +243,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         if self.obs_as_global_cond:
             # condition through global feature
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
-            nobs_features = self.obs_encoder(this_nobs)
+            this_vggt_obs = dict_apply(vggt_obs_dict, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
+            nobs_features = self.obs_encoder(this_nobs, this_vggt_obs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(B, -1)
             # empty data for action
@@ -155,7 +253,8 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         else:
             # condition through impainting
             this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
-            nobs_features = self.obs_encoder(this_nobs)
+            this_vggt_obs = dict_apply(vggt_obs_dict, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
+            nobs_features = self.obs_encoder(this_nobs, this_vggt_obs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(B, To, -1)
             cond_data = torch.zeros(size=(B, T, Da+Do), device=device, dtype=dtype)

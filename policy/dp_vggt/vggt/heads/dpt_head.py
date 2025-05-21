@@ -224,9 +224,9 @@ class DPTHead(nn.Module):
         # 重新组织维度为 [B, S, C, H, W]
         out = out.view(B, S, *out.shape[1:])
         B, S, C, H, W = out.shape
-        print("out.shape: ", out.shape)
+        # print("out.shape: ", out.shape)
         out = out.reshape(B, S*C, H, W)
-        print("out.shape: ", out.shape)
+        # print("out.shape: ", out.shape)
 
         return out
 
