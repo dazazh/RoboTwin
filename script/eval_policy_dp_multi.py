@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./') 
-sys.path.insert(0, './policy/Multi-Diffusion-Policy') 
+sys.path.insert(0, './policy/dp_multi') 
 
 import torch  
 import os
@@ -26,7 +26,7 @@ parent_directory = os.path.dirname(current_file_path)
 def get_policy(checkpoint, output_dir, device):
     
     # load checkpoint
-    payload = torch.load(open('./policy/Multi-Diffusion-Policy/'+checkpoint, 'rb'), pickle_module=dill)
+    payload = torch.load(open('./policy/dp_multi/'+checkpoint, 'rb'), pickle_module=dill)
     cfg = payload['cfg']
     cls = hydra.utils.get_class(cfg._target_)
     workspace = cls(cfg, output_dir=output_dir)
@@ -114,7 +114,7 @@ def test_policy(task_name, Demo_class, args, dp: DP, st_seed, test_num=20):
         args['render_freq'] = render_freq
 
         Demo_class.setup_demo(now_ep_num=now_id, seed = now_seed, is_test = True, ** args)
-        Demo_class.apply_multi_dp(dp, args)
+        Demo_class.apply_dp_multi(dp, args)
 
         now_id += 1
         Demo_class.close()

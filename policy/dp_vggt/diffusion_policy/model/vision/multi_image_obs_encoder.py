@@ -7,6 +7,7 @@ from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
 import matplotlib.pyplot as plt
+from .model_getter import get_resnet, check_model_frozen
 
 
 class MultiImageObsEncoder(ModuleAttrMixin):
@@ -217,6 +218,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
                 feature = self.key_model_map[key](img)
+                # 确保参数保持冻结状态
+                # if not hasattr(self, '_frozen_checked'):
+                #     print(f"\nChecking {key} model after loading weights:")
+                #     check_model_frozen(self.key_model_map[key])
+                #     self._frozen_checked = True
                 features.append(feature)
                 vggt_img.append(img)
             
@@ -287,6 +293,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 assert img.shape[1:] == torch.Size(self.key_shape_map[key])
                 img = self.key_transform_map[key](img)
                 feature = self.key_model_map[key](img)
+                # 确保参数保持冻结状态
+                if not hasattr(self, '_frozen_checked'):
+                    print(f"\nChecking {key} model after loading weights:")
+                    check_model_frozen(self.key_model_map[key])
+                    self._frozen_checked = True
                 features.append(feature)
                 vggt_img.append(original_img)
             

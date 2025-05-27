@@ -113,7 +113,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 low_dim_keys.append(key)
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
-        rgb_keys = sorted(rgb_keys)
+        # rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
 
         self.shape_meta = shape_meta

@@ -16,11 +16,17 @@ def get_resnet(name, weights=None, **kwargs):
     func = getattr(torchvision.models, name)
     resnet = func(weights=weights, **kwargs)
     resnet.fc = torch.nn.Identity()
-    # resnet_new = torch.nn.Sequential(
-    #     resnet,
-    #     torch.nn.Linear(512, 128)
-    # )
-    # return resnet_new
+    
+    # # 只冻结卷积层
+    # for name, param in resnet.named_parameters():
+    #     if "fc" not in name:  # 不冻结全连接层
+    #         param.requires_grad = False
+    
+    # # 打印参数状态
+    # print("Parameter status after freezing:")
+    # for name, param in resnet.named_parameters():
+    #     print(f"{name}: requires_grad = {param.requires_grad}")
+    
     return resnet
 
 def get_r3m(name, **kwargs):
@@ -85,6 +91,19 @@ def visualize_feature_maps(model, input_image):
         plt.tight_layout()
         plt.savefig(f'{layer_name}_feature_maps.png')
         plt.close()
+
+def check_model_frozen(model):
+    """
+    检查模型参数是否被冻结
+    """
+    print("\nChecking model parameter status:")
+    for name, param in model.named_parameters():
+        print(f"{name}: requires_grad = {param.requires_grad}")
+    
+    # 计算冻结和未冻结的参数数量
+    frozen_params = sum(1 for param in model.parameters() if not param.requires_grad)
+    total_params = sum(1 for param in model.parameters())
+    print(f"\nFrozen parameters: {frozen_params}/{total_params} ({frozen_params/total_params*100:.2f}%)")
 
 if __name__ == "__main__":
     model = get_resnet("resnet18", weights="IMAGENET1K_V1")

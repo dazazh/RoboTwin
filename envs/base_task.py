@@ -2104,13 +2104,13 @@ class Base_task(gym.Env):
             
         print("\nfail!")
 
-    def apply_multi_dp(self, model, args):
+    def apply_dp_multi(self, model, args):
         cnt = 0
         self.test_num += 1
 
         eval_video_log = args['eval_video_log']
         video_size = str(args['head_camera_w']) + 'x' + str(args['head_camera_h'])
-        save_dir = 'multi-dp-900/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
+        save_dir = 'dp_multi/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
 
         if eval_video_log:
             import subprocess
