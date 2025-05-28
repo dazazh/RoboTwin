@@ -11,7 +11,7 @@ wrist_camera_type: L515
 front_camera_type: L515
 pcd_crop: true
 pcd_down_sample_num: 1024
-episode_num: 50
+episode_num: 300
 save_freq: 15
 save_type:
   raw_data: false

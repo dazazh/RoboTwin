@@ -26,7 +26,7 @@ parent_directory = os.path.dirname(current_file_path)
 def get_policy(checkpoint, output_dir, device):
     
     # load checkpoint
-    payload = torch.load(open('./policy/Multi-Diffusion-Policy/'+checkpoint, 'rb'), pickle_module=dill)
+    payload = torch.load(open('./policy/dp_multi/'+checkpoint, 'rb'), pickle_module=dill)
     cfg = payload['cfg']
     cls = hydra.utils.get_class(cfg._target_)
     workspace = cls(cfg, output_dir=output_dir)

@@ -101,7 +101,7 @@ training:
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
-  num_epochs: 900
+  num_epochs: 300
   gradient_accumulate_every: 1
   # EMA destroys performance when used with BatchNorm
   # replace BatchNorm with GroupNorm.
@@ -110,7 +110,7 @@ training:
   # training loop control
   # in epochs
   rollout_every: 50
-  checkpoint_every: 150
+  checkpoint_every: 300
   val_every: 1
   sample_every: 5
   # steps per epoch
@@ -120,10 +120,10 @@ training:
   tqdm_interval_sec: 1.0
 
 logging:
-  project: diffusion_policy_debug
+  project: cup_place
   resume: True
   mode: online
-  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  name: dp_multi_${name}_${task_name}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null
@@ -151,4 +151,5 @@ hydra:
     subdir: ${hydra.job.num}
 
 head_camera_type: null
+front_camera_type: null
 expert_data_num: null

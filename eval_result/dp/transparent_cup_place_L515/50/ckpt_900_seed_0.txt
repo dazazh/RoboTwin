@@ -1,0 +1,12 @@
+Timestamp: 2025-05-27 04:22:30
+
+Checkpoint Num: 900
+Successful Rate of Diffenent checkpoints:
+0.07
+
+TopK 1 Success Rate (every):
+0.07
+
+TopK 1 Success Rate:
+0.07
+

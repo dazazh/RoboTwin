@@ -27,6 +27,7 @@ from diffusion_policy.model.diffusion.ema_model import EMAModel
 from diffusion_policy.model.common.lr_scheduler import get_scheduler
 import wandb
 
+os.environ["WANDB_API_KEY"] = "4a9d5bab6e579276db7f009dfeaeb718108ba031"
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
 class RobotWorkspace(BaseWorkspace):
@@ -111,18 +112,21 @@ class RobotWorkspace(BaseWorkspace):
         # assert isinstance(env_runner, BaseImageRunner)
         env_runner = None
 
-        # configure logging
+        WANDB = True
+        wandb.login()
 
-        wandb_run = wandb.init(
-            dir=str(self.output_dir),
-            config=OmegaConf.to_container(cfg, resolve=True),
-            **cfg.logging
-        )
-        wandb.config.update(
-            {
-                "output_dir": self.output_dir,
-            }
-        )
+        # configure logging
+        if WANDB:
+            wandb_run = wandb.init(
+                dir=str(self.output_dir),
+                config=OmegaConf.to_container(cfg, resolve=True),
+                **cfg.logging
+            )
+            wandb.config.update(
+                {
+                    "output_dir": self.output_dir,
+                }
+            )
 
         # configure checkpoint
         topk_manager = TopKCheckpointManager(
@@ -269,6 +273,8 @@ class RobotWorkspace(BaseWorkspace):
                 # end of epoch
                 # log of last step is combined with validation and rollout
                 json_logger.log(step_log)
+                if WANDB:
+                    wandb_run.log(step_log, step=self.global_step)
                 self.global_step += 1
                 self.epoch += 1
 

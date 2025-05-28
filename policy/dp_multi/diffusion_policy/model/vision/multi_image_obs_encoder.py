@@ -6,7 +6,7 @@ import torchvision
 from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
-import matplotlib.pyplot as plt
+
 
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
@@ -21,20 +21,16 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             share_rgb_model: bool=False,
             # renormalize rgb input with imagenet normalization
             # assuming input in [0,1]
-            imagenet_norm: bool=False,
-            vggt_model: nn.Module=None,
-            spatial_reducer: nn.Module=None 
+            imagenet_norm: bool=False
         ):
         """
         Assumes rgb input: B,C,H,W
         Assumes low_dim input: B,D
-        Assumes features input: B,D
         """
         super().__init__()
 
         rgb_keys = list()
         low_dim_keys = list()
-        feature_keys = list()
         key_model_map = nn.ModuleDict()
         key_transform_map = nn.ModuleDict()
         key_shape_map = dict()
@@ -115,18 +111,10 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 key_transform_map[key] = this_transform
             elif type == 'low_dim':
                 low_dim_keys.append(key)
-            elif type == 'features':
-                feature_keys.append(key)
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
-        # rgb_keys = sorted(rgb_keys)
+        rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
-        feature_keys = sorted(feature_keys)
-
-        # Initialize vggt_model and ensure it follows device
-        self.vggt_model = vggt_model
-        # ckpt = torch.load('/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/vggt/checkpoints/original_model.pt')
-        # self.vggt_model.load_state_dict(ckpt,strict=False)
 
         self.shape_meta = shape_meta
         self.key_model_map = key_model_map
@@ -134,44 +122,9 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         self.share_rgb_model = share_rgb_model
         self.rgb_keys = rgb_keys
         self.low_dim_keys = low_dim_keys
-        self.feature_keys = feature_keys
         self.key_shape_map = key_shape_map
-        self.spatial_reducer = spatial_reducer
-        self.visualization_counter = 0
 
-    def visualize_vggt_features(self, features, output_path):
-        """
-        可视化VGGT特征图
-        
-        Args:
-            features (torch.Tensor): 特征图，形状为 [n_features, height, width]
-            output_path (str): 输出文件路径
-        """
-        # 确保特征图在CPU上并转换为numpy数组
-        if isinstance(features, torch.Tensor):
-            features = features.cpu().numpy()
-        
-        # 如果特征图是4D的，取第一个batch
-        if features.ndim == 4:
-            features = features[0]
-        
-        n_features = features.shape[0]
-        fig, axes = plt.subplots(4, 4, figsize=(20, 20))
-        axes = axes.ravel()
-        
-        for idx in range(n_features):
-            feature_map = features[idx]
-            # 归一化到0-1范围以便可视化
-            feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min())
-            axes[idx].imshow(feature_map, cmap='viridis')
-            axes[idx].set_title(f'Feature Map {idx}')
-            axes[idx].axis('off')
-        
-        plt.tight_layout()
-        plt.savefig(output_path)
-        plt.close()
-
-    def forward(self, obs_dict, original_obs_dict):
+    def forward(self, obs_dict):
         batch_size = None
         features = list()
         # process rgb input
@@ -184,7 +137,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
                 imgs.append(img)
             # (N*B,C,H,W)
@@ -200,33 +153,16 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             features.append(feature)
         else:
             # run each rgb obs to independent models
-            vggt_img = []
             for key in self.rgb_keys:
                 img = obs_dict[key]
-                original_img = original_obs_dict[key]
                 if batch_size is None:
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
                 feature = self.key_model_map[key](img)
                 features.append(feature)
-                vggt_img.append(original_img)
-            
-            # 确保所有张量都在正确的设备上
-            vggt_img = torch.stack(vggt_img, dim=1).to(self.device)
-            vggt_features = self.vggt_model(vggt_img)
-            vggt_features = vggt_features.view(-1 ,16, 16, vggt_features.shape[-2], vggt_features.shape[-1])  # 重组为(16组, 每组16通道, H, W)
-            vggt_features = vggt_features.mean(dim=2)  # 在每组内进行平均池化
-            # if self.training:  # 只在训练时可视化
-            # self.visualize_vggt_features(
-            #     vggt_features[0], 
-            #     f'vggt_features_visualization_{self.visualization_counter}.png'
-            # )
-            self.visualization_counter += 1
-            reduced_vggt_features = self.spatial_reducer(vggt_features)
-            features.append(reduced_vggt_features)
         
         # process lowdim input
         for key in self.low_dim_keys:
@@ -245,7 +181,6 @@ class MultiImageObsEncoder(ModuleAttrMixin):
     @torch.no_grad()
     def output_shape(self):
         example_obs_dict = dict()
-        example_vggt_obs_dict = dict()
         obs_shape_meta = self.shape_meta['obs']
         batch_size = 1
         for key, attr in obs_shape_meta.items():
@@ -254,12 +189,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 (batch_size,) + shape, 
                 dtype=self.dtype,
                 device=self.device)
-            vggt_obs = torch.zeros(
-                (batch_size, 3, 518, 518), 
-                dtype=self.dtype,
-                device=self.device)
             example_obs_dict[key] = this_obs
-            example_vggt_obs_dict[key] = vggt_obs
-        example_output = self.forward(example_obs_dict,example_vggt_obs_dict)
+        example_output = self.forward(example_obs_dict)
         output_shape = example_output.shape[1:]
         return output_shape
