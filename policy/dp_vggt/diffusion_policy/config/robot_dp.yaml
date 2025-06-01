@@ -127,7 +127,7 @@ logging:
   project: cup_place
   resume: True
   mode: online
-  name: unfrozen_dp_vggt_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}
+  name: unfrozen_dp_vggt_300_${name}_${task_name}_${now:%Y.%m.%d-%H.%M.%S}
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null

@@ -59,7 +59,7 @@ class RobotWorkspace(BaseWorkspace):
         # configure training state
         self.global_step = 0
         self.epoch = 0
-        self.load_checkpoint_missing_vggt(path="/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/checkpoints/transparent_cup_place_L515_50_0/0.ckpt")
+        self.load_checkpoint_missing_vggt(path="/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/policy/dp_vggt/checkpoints/transparent_cup_place_L515_300_0/0.ckpt")
 
     def run(self):
         cfg = copy.deepcopy(self.cfg)
@@ -122,7 +122,7 @@ class RobotWorkspace(BaseWorkspace):
         # assert isinstance(env_runner, BaseImageRunner)
         env_runner = None
 
-        WANDB = True
+        WANDB = False
         if WANDB and accelerator.is_main_process:
             wandb.login()
             wandb_run = wandb.init(
@@ -345,7 +345,7 @@ def create_dataloader(dataset, *, batch_size: int, shuffle: bool, num_workers: i
     def collate(x):
         assert len(x) == 1
         return x[0]
-    dataloader = DataLoader(dataset, collate_fn=collate, sampler=batch_sampler, num_workers=num_workers, pin_memory=False, persistent_workers=persistent_workers)
+    dataloader = DataLoader(dataset, collate_fn=collate, sampler=batch_sampler, num_workers=num_workers, pin_memory=True, persistent_workers=persistent_workers)
     return dataloader
 
 @hydra.main(

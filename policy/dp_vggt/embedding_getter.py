@@ -188,7 +188,7 @@ def main():
     
     # 设置输入输出路径
     base_input_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_pkl"
-    base_output_dir = f"/mnt/workspace/yuhao/depth_encoder_test/RoboTwin-encoder/data/{args.task}_L515_with_embedding_pkl"
+    base_output_dir = f"/cpfs04/shared/muyao/yuhao/data/{args.task}_L515_with_embedding_pkl"
     
     print(f"Processing task: {args.task}")
     print(f"Input directory: {base_input_dir}")

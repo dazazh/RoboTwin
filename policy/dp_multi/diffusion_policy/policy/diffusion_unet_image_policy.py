@@ -32,9 +32,9 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         super().__init__()
 
         # parse shapes
-        action_shape = shape_meta['action']['shape']
+        action_shape = shape_meta['action']['shape'] #
         assert len(action_shape) == 1
-        action_dim = action_shape[0]
+        action_dim = action_shape[0] #
         # get feature dim
         obs_feature_dim = obs_encoder.output_shape()[0]
 
@@ -45,7 +45,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             input_dim = action_dim
             global_cond_dim = obs_feature_dim * n_obs_steps
 
-        model = ConditionalUnet1D(
+        model = ConditionalUnet1D( #unet
             input_dim=input_dim,
             local_cond_dim=None,
             global_cond_dim=global_cond_dim,
@@ -56,17 +56,17 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             cond_predict_scale=cond_predict_scale
         )
 
-        self.obs_encoder = obs_encoder
-        self.model = model
-        self.noise_scheduler = noise_scheduler
-        self.mask_generator = LowdimMaskGenerator(
+        self.obs_encoder = obs_encoder # multi_image_obs_encoder
+        self.model = model 
+        self.noise_scheduler = noise_scheduler # ddpm_scheduler
+        self.mask_generator = LowdimMaskGenerator( # lowdim_mask_generator
             action_dim=action_dim,
             obs_dim=0 if obs_as_global_cond else obs_feature_dim,
             max_n_obs_steps=n_obs_steps,
             fix_obs_steps=True,
             action_visible=False
         )
-        self.normalizer = LinearNormalizer()
+        self.normalizer = LinearNormalizer() # linear_normalizer
         self.horizon = horizon
         self.obs_feature_dim = obs_feature_dim
         self.action_dim = action_dim
@@ -90,6 +90,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         model = self.model
         scheduler = self.noise_scheduler
 
+        # 1. generate random noise
         trajectory = torch.randn(
             size=condition_data.shape, 
             dtype=condition_data.dtype,
@@ -99,6 +100,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         # set step values
         scheduler.set_timesteps(self.num_inference_steps)
 
+        # 2. iterate over timesteps
         for t in scheduler.timesteps:
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]

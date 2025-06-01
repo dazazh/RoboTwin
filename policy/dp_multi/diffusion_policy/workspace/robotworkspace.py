@@ -112,7 +112,7 @@ class RobotWorkspace(BaseWorkspace):
         # assert isinstance(env_runner, BaseImageRunner)
         env_runner = None
 
-        WANDB = True
+        WANDB = False
         wandb.login()
 
         # configure logging

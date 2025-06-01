@@ -123,7 +123,7 @@ logging:
   project: cup_place
   resume: True
   mode: online
-  name: dp_multi_${name}_${task_name}
+  name: dp_multi_${name}_${task_name}_yunfei
   tags: ["${name}", "${task_name}", "${exp_name}"]
   id: null
   group: null

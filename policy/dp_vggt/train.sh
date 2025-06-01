@@ -30,7 +30,7 @@ else
     echo -e "\033[33mTrain mode\033[0m"
 fi
 
-if [ ! -d "./data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" ]; then
+if [ ! -d "/cpfs04/shared/muyao/yuhao/data_zarr/${task_name}_${head_camera_type}_${expert_data_num}.zarr" ]; then
     echo "zarr does not exist, run pkl2zarr_dp.py"
     cd ../..
     expert_data_num_minus_one=$((expert_data_num - 1))
@@ -47,7 +47,7 @@ export HYDRA_FULL_ERROR=1
 export CUDA_VISIBLE_DEVICES=${gpu_id}
 accelerate launch --main_process_port 29502 train.py --config-name=${config_name}.yaml \
                             task.name=${task_name} \
-                            task.dataset.zarr_path="data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" \
+                            task.dataset.zarr_path="/cpfs04/shared/muyao/yuhao/data_zarr/${task_name}_${head_camera_type}_${expert_data_num}.zarr" \
                             training.debug=$DEBUG \
                             training.seed=${seed} \
                             training.device="cuda:0" \
