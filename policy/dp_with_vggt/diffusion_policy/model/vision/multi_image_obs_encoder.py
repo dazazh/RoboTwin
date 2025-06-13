@@ -113,7 +113,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 low_dim_keys.append(key)
             else:
                 raise RuntimeError(f"Unsupported obs type: {type}")
-        # rgb_keys = sorted(rgb_keys)
+        rgb_keys = sorted(rgb_keys)
         low_dim_keys = sorted(low_dim_keys)
 
         self.shape_meta = shape_meta
@@ -137,7 +137,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
                 imgs.append(img)
             # (N*B,C,H,W)
@@ -159,7 +159,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                     batch_size = img.shape[0]
                 else:
                     assert batch_size == img.shape[0]
-                assert img.shape[1:] == torch.Size(self.key_shape_map[key])
+                assert img.shape[1:] == self.key_shape_map[key]
                 img = self.key_transform_map[key](img)
                 feature = self.key_model_map[key](img)
                 features.append(feature)

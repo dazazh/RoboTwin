@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./') 
-sys.path.insert(0, './policy/Multi-Diffusion-Policy') 
+sys.path.insert(0, './policy/dp_multi') 
 
 import torch  
 import os

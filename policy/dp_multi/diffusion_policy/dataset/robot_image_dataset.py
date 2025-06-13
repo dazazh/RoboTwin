@@ -83,8 +83,8 @@ class RobotImageDataset(BaseImageDataset):
         normalizer.fit(data=data, last_n_dims=1, mode=mode, **kwargs)
         normalizer['head_cam'] = get_image_range_normalizer()
         normalizer['front_cam'] = get_image_range_normalizer()
-        normalizer['left_cam'] = get_image_range_normalizer()
-        normalizer['right_cam'] = get_image_range_normalizer()
+        # normalizer['left_cam'] = get_image_range_normalizer()
+        # normalizer['right_cam'] = get_image_range_normalizer()
         return normalizer
 
     def __len__(self) -> int:

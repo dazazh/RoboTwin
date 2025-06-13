@@ -30,30 +30,30 @@ else
 fi
 
 if [ ! -d "./data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" ]; then
-    echo "zarr does not exist, run pkl2zarr_multi_dp.py"
+    echo "zarr does not exist, run pkl2zarr_dp.py"
     cd ../..
     expert_data_num_minus_one=$((expert_data_num - 1))
-    if [ ! -d "/mnt/workspace/yuhao/RoboTwin/data/${task_name}_${head_camera_type}_pkl/episode${expert_data_num_minus_one}" ]; then
+    if [ ! -d "./data/${task_name}_${head_camera_type}_pkl/episode${expert_data_num_minus_one}" ]; then
         echo "error: expert data does not exist"
         exit 1
     else
-        python script/pkl2zarr_multi_dp.py ${task_name} ${head_camera_type} ${expert_data_num}
-        cd policy/Multi-Diffusion-Policy
+        python script/pkl2zarr_dp.py ${task_name} ${head_camera_type} ${expert_data_num}
+        cd policy/Diffusion-Policy
     fi
 fi
 
 export HYDRA_FULL_ERROR=1 
 export CUDA_VISIBLE_DEVICES=${gpu_id}
 
-accelerate launch train.py --config-name=${config_name}.yaml \
+torchrun --nproc_per_node=2 train.py --config-name=${config_name}.yaml \
                             task.name=${task_name} \
                             task.dataset.zarr_path="data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" \
                             training.debug=$DEBUG \
                             training.seed=${seed} \
+                            training.device="cuda:0" \
                             exp_name=${exp_name} \
                             logging.mode=${wandb_mode} \
                             head_camera_type=${head_camera_type} \
                             expert_data_num=${expert_data_num}
-                            # task.dataset.head_camera=${head_camera_type}
                             # checkpoint.save_ckpt=${save_ckpt}
                             # hydra.run.dir=${run_dir} \

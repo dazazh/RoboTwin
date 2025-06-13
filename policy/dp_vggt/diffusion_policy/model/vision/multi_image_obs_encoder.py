@@ -7,6 +7,8 @@ from diffusion_policy.model.vision.crop_randomizer import CropRandomizer
 from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
 import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
 
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
@@ -201,6 +203,36 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         else:
             # run each rgb obs to independent models
             vggt_img = []
+            # 只对第一个RGB key进行可视化
+            first_key = self.rgb_keys[0]
+            img = obs_dict[first_key]
+            
+            # 可视化第一张图片
+            if img.dim() == 4:  # (B,C,H,W)
+                img_to_vis = img[0].clone()  # 取第一个batch
+                if isinstance(img_to_vis, torch.Tensor):
+                    img_np = img_to_vis.detach().cpu().numpy()
+                    if img_np.shape[0] <= 4:  # CHW -> HWC
+                        img_np = np.transpose(img_np, (1, 2, 0))
+                    
+                    # 处理值范围
+                    if img_np.max() <= 1.0:
+                        img_np = (img_np * 255).astype(np.uint8)
+                    else:
+                        img_np = np.clip(img_np, 0, 255).astype(np.uint8)
+                    
+                    # 处理通道
+                    if img_np.shape[2] == 1:
+                        img_np = np.repeat(img_np, 3, axis=2)
+                    elif img_np.shape[2] == 4:
+                        img_np = img_np[:, :, :3]
+                    
+                    # 保存图像
+                    pil_img = Image.fromarray(img_np)
+                    pil_img.save('first_image.png')
+                    print(f"第一张图像已保存为 first_image.png, 形状: {img.shape}")
+            
+            # 继续原来的处理流程
             for key in self.rgb_keys:
                 img = obs_dict[key]
                 original_img = original_obs_dict[key]
