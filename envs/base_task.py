@@ -1274,6 +1274,8 @@ class Base_task(gym.Env):
         front_cam = np.moveaxis(observation['observation']['front_camera']['rgb'], -1, 0) / 255
         left_cam = np.moveaxis(observation['observation']['left_camera']['rgb'], -1, 0) / 255
         right_cam = np.moveaxis(observation['observation']['right_camera']['rgb'], -1, 0) / 255
+        original_head_cam = np.moveaxis(observation['observation']['head_camera']['rgb'], -1, 0) / 255
+        original_front_cam = np.moveaxis(observation['observation']['front_camera']['rgb'], -1, 0) / 255
         vggt_head_cam = observation['observation']['head_camera']['rgb']
         vggt_front_cam = observation['observation']['front_camera']['rgb']
         return dict(
@@ -1281,6 +1283,8 @@ class Base_task(gym.Env):
             front_cam = front_cam,
             left_cam = left_cam,
             right_cam = right_cam,
+            original_head_cam = original_head_cam,
+            original_front_cam = original_front_cam,    
             vggt_head_cam = vggt_head_cam,
             vggt_front_cam = vggt_front_cam
         )
@@ -2302,7 +2306,7 @@ class Base_task(gym.Env):
 
         eval_video_log = args['eval_video_log']
         video_size = str(args['head_camera_w']) + 'x' + str(args['head_camera_h'])
-        save_dir = 'dp_vggt/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
+        save_dir = 'sdp/' + str(args['task_name']) + '_' + str(args['head_camera_type']) + '_' + str(args['expert_data_num']) + '_' + 'seed' + str(args['expert_seed'])
 
         if eval_video_log:
             import subprocess

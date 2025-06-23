@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./') 
-sys.path.insert(0, './policy/Diffusion-Policy') 
+sys.path.insert(0, './policy/SpatialDP') 
 
 import torch  
 import os
@@ -26,12 +26,13 @@ parent_directory = os.path.dirname(current_file_path)
 def get_policy(checkpoint, output_dir, device):
     
     # load checkpoint
-    payload = torch.load(open('./policy/dp_vggt/'+checkpoint, 'rb'), pickle_module=dill)
+    payload = torch.load(open('./policy/SpatialDP/'+checkpoint, 'rb'), pickle_module=dill)
     cfg = payload['cfg']
     cls = hydra.utils.get_class(cfg._target_)
     workspace = cls(cfg, output_dir=output_dir)
     workspace: RobotWorkspace
     workspace.load_payload(payload, exclude_keys=None, include_keys=None)
+    print("workspace.model",workspace.model)
     
     # get policy from workspace
     policy = workspace.model
@@ -114,7 +115,7 @@ def test_policy(task_name, Demo_class, args, dp: DP, st_seed, test_num=20):
         args['render_freq'] = render_freq
 
         Demo_class.setup_demo(now_ep_num=now_id, seed = now_seed, is_test = True, ** args)
-        Demo_class.apply_dp(dp, args)
+        Demo_class.apply_dp_vggt(dp, args)
 
         now_id += 1
         Demo_class.close()

@@ -1,12 +1,12 @@
-Timestamp: 2025-06-16 17:25:59
+Timestamp: 2025-06-17 00:46:44
 
 Checkpoint Num: 300
 Successful Rate of Diffenent checkpoints:
-0.09
+0.21
 
 TopK 1 Success Rate (every):
-0.09
+0.21
 
 TopK 1 Success Rate:
-0.09
+0.21
 

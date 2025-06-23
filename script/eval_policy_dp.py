@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./') 
-sys.path.insert(0, './policy/Diffusion-Policy') 
+sys.path.insert(0, './policy/My-Policy') 
 
 import torch  
 import os
@@ -26,12 +26,13 @@ parent_directory = os.path.dirname(current_file_path)
 def get_policy(checkpoint, output_dir, device):
     
     # load checkpoint
-    payload = torch.load(open('./policy/Diffusion-Policy/'+checkpoint, 'rb'), pickle_module=dill)
+    payload = torch.load(open('./policy/My-Policy/'+checkpoint, 'rb'), pickle_module=dill)
     cfg = payload['cfg']
     cls = hydra.utils.get_class(cfg._target_)
     workspace = cls(cfg, output_dir=output_dir)
     workspace: RobotWorkspace
     workspace.load_payload(payload, exclude_keys=None, include_keys=None)
+    print(workspace.model)
     
     # get policy from workspace
     policy = workspace.model

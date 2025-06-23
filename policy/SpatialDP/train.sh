@@ -1,6 +1,7 @@
 # 
 task_name=${1}
 head_camera_type=${2}
+front_camera_type=L515
 expert_data_num=${3}
 seed=${4}
 gpu_id=${5}
@@ -29,7 +30,7 @@ else
     echo -e "\033[33mTrain mode\033[0m"
 fi
 
-if [ ! -d "./data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" ]; then
+if [ ! -d "/data/user/xcs/yuhao/3d-aware/SpatialDP/data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" ]; then
     echo "zarr does not exist, run pkl2zarr_dp.py"
     cd ../..
     expert_data_num_minus_one=$((expert_data_num - 1))
@@ -44,17 +45,17 @@ fi
 
 export HYDRA_FULL_ERROR=1 
 export CUDA_VISIBLE_DEVICES=${gpu_id}
-export WANDB_BASE_URL=https://api.bandw.top
-
 python train.py --config-name=${config_name}.yaml \
-                            task.name=${task_name} \
-                            task.dataset.zarr_path="data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" \
-                            training.debug=$DEBUG \
-                            training.seed=${seed} \
-                            training.device="cuda:0" \
-                            exp_name=${exp_name} \
-                            logging.mode=${wandb_mode} \
-                            head_camera_type=${head_camera_type} \
-                            expert_data_num=${expert_data_num}
-                            # checkpoint.save_ckpt=${save_ckpt}
-                            # hydra.run.dir=${run_dir} \
+        task.name=${task_name} \
+        task.dataset.zarr_path="./data/${task_name}_${head_camera_type}_${expert_data_num}.zarr" \
+        training.debug=$DEBUG \
+        training.seed=${seed} \
+        training.device="cuda:0" \
+        exp_name=${exp_name} \
+        logging.mode=${wandb_mode} \
+        head_camera_type=${head_camera_type} \
+        front_camera_type="L515"\
+        expert_data_num=${expert_data_num} 
+        # > output.log 2>&1
+        # checkpoint.save_ckpt=${save_ckpt}
+        # hydra.run.dir=${run_dir}
