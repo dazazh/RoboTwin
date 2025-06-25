@@ -18,11 +18,11 @@ shape_meta: &shape_meta
     vggt_features_current:
       shape: [8, 2048]
       type: features
-    original_head_cam:
-      shape: *head_image_shape
+    vggt_head_cam:
+      shape: [3, 294, 518]
       type: original_rgb
-    original_front_cam:
-      shape: *front_image_shape
+    vggt_front_cam:
+      shape: [3, 294, 518]
       type: original_rgb
     # left_cam:
     #   shape: *image_shape

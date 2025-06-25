@@ -11,6 +11,98 @@ from .model_getter import get_resnet, check_model_frozen
 from .fast_vggt import VGGTPredictor as FastVGGTModel
 from .vggt_adapter import VGGTAdapter
 from vggt.models.vggt import VGGT
+import cv2
+import numpy as np
+
+target_size = 518
+patch_size = 14
+
+def get_target_shape(width, height, mode="crop"):
+    """
+    Calculate target shape based on input dimensions and mode.
+    
+    Args:
+        width (int): Original image width
+        height (int): Original image height
+        mode (str): Either "crop" or "pad"
+        
+    Returns:
+        tuple: (new_height, new_width)
+    """
+    if mode == "pad":
+        # Make the largest dimension 518px while maintaining aspect ratio
+        if width >= height:
+            new_width = target_size
+            new_height = round(height * (new_width / width) / patch_size) * patch_size
+        else:
+            new_height = target_size
+            new_width = round(width * (new_height / height) / patch_size) * patch_size
+    else:  # mode == "crop"
+        # Set width to 518px
+        new_width = target_size
+        # Calculate height maintaining aspect ratio, divisible by patch_size
+        new_height = round(height * (new_width / width) / patch_size) * patch_size
+        
+        # Center crop height if it's larger than target_size
+        if new_height > target_size:
+            new_height = target_size
+            
+    return new_height, new_width
+
+def preprocess_rgb(rgb, mode="crop"):
+    """
+    Preprocess RGB image with the following steps:
+    1. Normalize to [0, 1]
+    2. Resize to target shape (maintaining aspect ratio and divisible by patch_size)
+    3. Center crop or pad if necessary
+    4. Transpose to (C, H, W)
+    
+    Args:
+        rgb (numpy.ndarray): Input RGB image with shape (H, W, C)
+        mode (str): Either "crop" or "pad"
+        
+    Returns:
+        numpy.ndarray: Preprocessed image with shape (C, H, W)
+    """
+    # Convert to float32 and normalize to [0, 1]
+    rgb = rgb.astype(np.float32) / 255.0
+    
+    # Get original dimensions
+    height, width = rgb.shape[:2]
+    
+    # Calculate target dimensions
+    new_height, new_width = get_target_shape(width, height, mode)
+    
+    # Resize image
+    rgb = cv2.resize(rgb, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
+    
+    # Handle cropping or padding
+    if mode == "crop":
+        # Center crop if height is larger than target_size
+        if new_height > target_size:
+            start_y = (new_height - target_size) // 2
+            rgb = rgb[start_y:start_y + target_size, :, :]
+    else:  # mode == "pad"
+        # Pad to make a square of target_size x target_size
+        h_padding = target_size - rgb.shape[0]
+        w_padding = target_size - rgb.shape[1]
+        
+        if h_padding > 0 or w_padding > 0:
+            pad_top = h_padding // 2
+            pad_bottom = h_padding - pad_top
+            pad_left = w_padding // 2
+            pad_right = w_padding - pad_left
+            
+            # Pad with white (value=1.0)
+            rgb = np.pad(rgb, 
+                        ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                        mode='constant',
+                        constant_values=1.0)
+    
+    # Transpose to (C, H, W)
+    rgb = np.transpose(rgb, (2, 0, 1))
+    
+    return rgb
 
 def extract_features(vggt_model, img_tensor, device):
     with torch.no_grad():
@@ -222,12 +314,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
 
             features.append(feature)
             if key == 'head_cam':
-                batch_fast_vggt['head_img'] = obs_dict['original_head_cam']
+                batch_fast_vggt['head_img'] = obs_dict['vggt_head_cam']
             elif key == 'front_cam':
-                batch_fast_vggt['front_img'] = obs_dict['original_front_cam']
+                batch_fast_vggt['front_img'] = obs_dict['vggt_front_cam']
         
         # 确保所有张量都在正确的设备上
-
         batch_fast_vggt['vggt_feat_t0'] = obs_dict['vggt_features']
         vggt_features_t1_gt = obs_dict['vggt_features_current']
 
@@ -267,8 +358,14 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         batch_size = None
         features = list()
         # process rgb input
-        vggt_imgs = []
+        vggt_head_img = vggt_obs_dict['head_cam']
+        vggt_front_img = vggt_obs_dict['front_cam']
+        vggt_imgs = [vggt_head_img, vggt_front_img]
+
         batch_fast_vggt = {}
+        batch_fast_vggt['head_img'] = vggt_head_img.to(dtype=torch.float32)
+        batch_fast_vggt['front_img'] = vggt_front_img.to(dtype=torch.float32)
+
         for key in self.rgb_keys:
             img = obs_dict[key]
             vggt_img = vggt_obs_dict[key]
@@ -280,11 +377,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             img = self.key_transform_map[key](img)
             feature = self.key_model_map[key](img)
             features.append(feature)
-            vggt_imgs.append(vggt_img)
-            if key == 'head_cam':
-                batch_fast_vggt['head_img'] = obs_dict['original_head_cam'].to(dtype=torch.float32)
-            elif key == 'front_cam':
-                batch_fast_vggt['front_img'] = obs_dict['original_front_cam'].to(dtype=torch.float32)
+            # vggt_imgs.append(vggt_img)
+            # if key == 'head_cam':
+            #     batch_fast_vggt['head_img'] = obs_dict['vggt_head_cam'].to(dtype=torch.float32)
+            # elif key == 'front_cam':
+            #     batch_fast_vggt['front_img'] = obs_dict['vggt_front_cam'].to(dtype=torch.float32)
         
         # 确保所有张量都在正确的设备上
         if self.step % 5 == 0:

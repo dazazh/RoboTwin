@@ -32,7 +32,6 @@ def get_policy(checkpoint, output_dir, device):
     workspace = cls(cfg, output_dir=output_dir)
     workspace: RobotWorkspace
     workspace.load_payload(payload, exclude_keys=None, include_keys=None)
-    print("workspace.model",workspace.model)
     
     # get policy from workspace
     policy = workspace.model

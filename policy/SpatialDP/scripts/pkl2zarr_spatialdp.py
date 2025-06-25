@@ -147,6 +147,8 @@ def main():
 
     head_camera_arrays = []
     front_camera_arrays = []
+    original_head_camera_arrays = []
+    original_front_camera_arrays = []
     vggt_features_arrays = []
     vggt_features_current_arrays = []
     action_arrays = []
@@ -200,10 +202,13 @@ def main():
             head_camera_arrays.append(head_img_t1)
             front_camera_arrays.append(front_img_t1)
             vggt_features_arrays.append(vggt_feat_t0)
-            print("vggt_feat_t0 shape:", vggt_feat_t0.shape)
-
+            
             head_img_t1 = preprocess_rgb(head_img_t1)
             front_img_t1 = preprocess_rgb(front_img_t1)
+            print("original_head_camera.shape: ", head_img_t1.shape)
+            original_head_camera_arrays.append(head_img_t1)
+            original_front_camera_arrays.append(front_img_t1)
+
             img_tensor_t1 = torch.tensor([head_img_t1, front_img_t1]).unsqueeze(0).cuda()
             vggt_feat_t1 = extract_features(vggt_model, img_tensor_t1)[0]
             vggt_features_current_arrays.append(vggt_feat_t1)
@@ -224,6 +229,8 @@ def main():
     joint_action_arrays = np.array(joint_action_arrays)
     head_camera_arrays = np.array(head_camera_arrays)
     front_camera_arrays = np.array(front_camera_arrays)
+    original_head_camera_arrays = np.array(original_head_camera_arrays)
+    original_front_camera_arrays = np.array(original_front_camera_arrays)
     vggt_features_arrays = np.array(vggt_features_arrays)
     vggt_features_current_arrays = np.array(vggt_features_current_arrays)
 
@@ -235,6 +242,8 @@ def main():
 
     zarr_data.create_dataset('head_camera', data=head_camera_arrays, chunks=(chunk_size, *head_camera_arrays.shape[1:]), overwrite=True, compressor=compressor)
     zarr_data.create_dataset('front_camera', data=front_camera_arrays, chunks=(chunk_size, *front_camera_arrays.shape[1:]), overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('vggt_head_camera', data=original_head_camera_arrays, chunks=(chunk_size, *original_head_camera_arrays.shape[1:]), overwrite=True, compressor=compressor)
+    zarr_data.create_dataset('vggt_front_camera', data=original_front_camera_arrays, chunks=(chunk_size, *original_front_camera_arrays.shape[1:]), overwrite=True, compressor=compressor)
     zarr_data.create_dataset('vggt_features', data=vggt_features_arrays, chunks=(chunk_size, *vggt_features_arrays.shape[1:]), overwrite=True, compressor=compressor)
     zarr_data.create_dataset('vggt_features_current', data=vggt_features_current_arrays, chunks=(chunk_size, *vggt_features_current_arrays.shape[1:]), dtype='float32', overwrite=True, compressor=compressor)
     zarr_data.create_dataset('tcp_action', data=action_arrays, chunks=(chunk_size, action_arrays.shape[1]), dtype='float32', overwrite=True, compressor=compressor)

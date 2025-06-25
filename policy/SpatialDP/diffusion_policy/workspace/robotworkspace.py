@@ -113,7 +113,7 @@ class RobotWorkspace(BaseWorkspace):
         env_runner = None
 
         # configure logging
-        WANDB = True
+        WANDB = False
         if WANDB:
             wandb_run = wandb.init(
                 dir=str(self.output_dir),

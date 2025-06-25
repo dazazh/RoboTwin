@@ -11,97 +11,7 @@ from diffusion_policy.model.common.normalizer import LinearNormalizer
 from diffusion_policy.dataset.base_dataset import BaseImageDataset
 from diffusion_policy.common.normalize_util import get_image_range_normalizer
 import pdb
-
-target_size = 518
-patch_size = 14
-
-def get_target_shape(width, height, mode="crop"):
-    """
-    Calculate target shape based on input dimensions and mode.
-    
-    Args:
-        width (int): Original image width
-        height (int): Original image height
-        mode (str): Either "crop" or "pad"
-        
-    Returns:
-        tuple: (new_height, new_width)
-    """
-    if mode == "pad":
-        # Make the largest dimension 518px while maintaining aspect ratio
-        if width >= height:
-            new_width = target_size
-            new_height = round(height * (new_width / width) / patch_size) * patch_size
-        else:
-            new_height = target_size
-            new_width = round(width * (new_height / height) / patch_size) * patch_size
-    else:  # mode == "crop"
-        # Set width to 518px
-        new_width = target_size
-        # Calculate height maintaining aspect ratio, divisible by patch_size
-        new_height = round(height * (new_width / width) / patch_size) * patch_size
-        
-        # Center crop height if it's larger than target_size
-        if new_height > target_size:
-            new_height = target_size
-            
-    return new_height, new_width
-
-def preprocess_rgb(rgb, mode="crop"):
-    """
-    Preprocess RGB image with the following steps:
-    1. Normalize to [0, 1]
-    2. Resize to target shape (maintaining aspect ratio and divisible by patch_size)
-    3. Center crop or pad if necessary
-    4. Transpose to (C, H, W)
-    
-    Args:
-        rgb (numpy.ndarray): Input RGB image with shape (H, W, C)
-        mode (str): Either "crop" or "pad"
-        
-    Returns:
-        numpy.ndarray: Preprocessed image with shape (C, H, W)
-    """
-    # Convert to float32 and normalize to [0, 1]
-    rgb = rgb.astype(np.float32) / 255.0
-    
-    # Get original dimensions
-    height, width = rgb.shape[:2]
-    
-    # Calculate target dimensions
-    new_height, new_width = get_target_shape(width, height, mode)
-    
-    # Resize image
-    rgb = cv2.resize(rgb, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
-    
-    # Handle cropping or padding
-    if mode == "crop":
-        # Center crop if height is larger than target_size
-        if new_height > target_size:
-            start_y = (new_height - target_size) // 2
-            rgb = rgb[start_y:start_y + target_size, :, :]
-    else:  # mode == "pad"
-        # Pad to make a square of target_size x target_size
-        h_padding = target_size - rgb.shape[0]
-        w_padding = target_size - rgb.shape[1]
-        
-        if h_padding > 0 or w_padding > 0:
-            pad_top = h_padding // 2
-            pad_bottom = h_padding - pad_top
-            pad_left = w_padding // 2
-            pad_right = w_padding - pad_left
-            
-            # Pad with white (value=1.0)
-            rgb = np.pad(rgb, 
-                        ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
-                        mode='constant',
-                        constant_values=1.0)
-    
-    # Transpose to (C, H, W)
-    rgb = np.transpose(rgb, (2, 0, 1))
-    
-    return rgb
-
+import cv2
 
 class RobotImageDataset(BaseImageDataset):
     def __init__(self,
@@ -119,7 +29,7 @@ class RobotImageDataset(BaseImageDataset):
         self.replay_buffer = ReplayBuffer.copy_from_path(
             zarr_path,
             # keys=['head_camera', 'front_camera', 'left_camera', 'right_camera', 'state', 'action'],
-            keys=['head_camera', 'front_camera', 'state', 'vggt_features', 'vggt_features_current', 'action']
+            keys=['head_camera', 'front_camera', 'state', 'vggt_features', 'vggt_features_current', 'action', 'vggt_head_camera', 'vggt_front_camera']
         )
             
         val_mask = get_val_mask(
@@ -149,7 +59,10 @@ class RobotImageDataset(BaseImageDataset):
             k: np.zeros((batch_size, sequence_length, *v.shape[1:]), dtype=v.dtype)
             for k, v in self.sampler.replay_buffer.items()
         }
+        print("self.buffers['head_camera'].shape: ", self.buffers['head_camera'].shape)
         self.buffers_torch = {k: torch.from_numpy(v) for k, v in self.buffers.items()}
+        print("self.buffers_torch['head_camera'].shape: ", self.buffers_torch['head_camera'].shape)
+
         for v in self.buffers_torch.values():
             v.pin_memory()
 
@@ -203,7 +116,7 @@ class RobotImageDataset(BaseImageDataset):
             'action': sample['action'].astype(np.float32) # T, D
         }
         return data
-    
+
     def __getitem__(self, idx) -> Dict[str, torch.Tensor]:
         if isinstance(idx, slice):
             raise NotImplementedError  # Specialized
@@ -223,8 +136,8 @@ class RobotImageDataset(BaseImageDataset):
         agent_pos = samples['state'].to(device, non_blocking=True)
         head_cam = samples['head_camera'].to(device, non_blocking=True) / 255.0
         front_cam = samples['front_camera'].to(device, non_blocking=True) / 255.0
-        original_head_cam = preprocess_rgb(samples['head_camera'].to(device, non_blocking=True))
-        original_front_cam = preprocess_rgb(samples['front_camera'].to(device, non_blocking=True))
+        vggt_head_cam = samples['vggt_head_camera'].to(device, non_blocking=True)
+        vggt_front_cam = samples['vggt_front_camera'].to(device, non_blocking=True)
         # front_cam = samples['front_camera'].to(device, non_blocking=True) / 255.0
         # left_cam = samples['left_camera'].to(device, non_blocking=True) / 255.0
         # right_cam = samples['right_camera'].to(device, non_blocking=True) / 255.0
@@ -237,8 +150,8 @@ class RobotImageDataset(BaseImageDataset):
             'obs': {
                 'head_cam': head_cam , # B, T, 3, H, W
                 'front_cam': front_cam, # B, T, 3, H, W
-                'original_head_cam': original_head_cam, # B, T, 3, H, W
-                'original_front_cam': original_front_cam, # B, T, 3, H, W
+                'vggt_head_cam': vggt_head_cam, # B, T, 3, H, W
+                'vggt_front_cam': vggt_front_cam, # B, T, 3, H, W
                 'vggt_features': vggt_features,
                 'vggt_features_current': vggt_features_current,
                 # 'left_cam': left_cam, # B, T, 3, H, W

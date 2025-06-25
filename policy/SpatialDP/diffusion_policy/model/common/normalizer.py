@@ -52,14 +52,12 @@ class LinearNormalizer(DictOfTensorMixin):
         self.params_dict[key] = value.params_dict
 
     def _normalize_impl(self, x, forward=True):
-        print('self.params_dict.keys() =', self.params_dict.keys())
         if isinstance(x, dict):
             result = dict()
             for key, value in x.items():
-                if key == 'vggt_features' or key == 'vggt_features_current' or key == 'original_head_cam' or key == 'original_front_cam':
+                if key == 'vggt_features' or key == 'vggt_features_current' or key == 'vggt_head_cam' or key == 'vggt_front_cam':
                     result[key] = value
                     continue
-                print(f'Normalizing key: {key}')
                 params = self.params_dict[key]
                 result[key] = _normalize(value, params, forward=forward)
             return result

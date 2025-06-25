@@ -211,8 +211,6 @@ class DPRunner:
             obs_dict_input['left_cam'] = obs_dict['left_cam'].unsqueeze(0)
             obs_dict_input['right_cam'] = obs_dict['right_cam'].unsqueeze(0)
             obs_dict_input['agent_pos'] = obs_dict['agent_pos'].unsqueeze(0)
-            obs_dict_input['original_head_cam'] = obs_dict['original_head_cam'].unsqueeze(0)
-            obs_dict_input['original_front_cam'] = obs_dict['original_front_cam'].unsqueeze(0)
             vggt_obs_dict_input = {}
             vggt_obs_dict_input['head_cam'] = vggt_obs_dict['head_cam'].unsqueeze(0)
             vggt_obs_dict_input['front_cam'] = vggt_obs_dict['front_cam'].unsqueeze(0)
