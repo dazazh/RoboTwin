@@ -26,7 +26,9 @@ from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.model.diffusion.ema_model import EMAModel
 from diffusion_policy.model.common.lr_scheduler import get_scheduler
 import wandb
+import pathlib
 
+#os.environ['WANDB_BASE_URL']='https://api.bandw.top'
 os.environ["WANDB_API_KEY"] = "4a9d5bab6e579276db7f009dfeaeb718108ba031"
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
@@ -65,7 +67,7 @@ class RobotWorkspace(BaseWorkspace):
 
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = self.get_checkpoint_path()
+            lastest_ckpt_path = pathlib.Path("/data/user/xcs/yuhao/3d-aware/RoboTwin/policy/SpatialDP/checkpoints/empty_cup_place_L515_50_0/150.ckpt")
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
@@ -113,7 +115,7 @@ class RobotWorkspace(BaseWorkspace):
         env_runner = None
 
         # configure logging
-        WANDB = False
+        WANDB = True
         if WANDB:
             wandb_run = wandb.init(
                 dir=str(self.output_dir),
@@ -242,23 +244,27 @@ class RobotWorkspace(BaseWorkspace):
                             step_log['val_loss'] = val_loss
 
                 # run diffusion sampling on a training batch
-                # if (self.epoch % cfg.training.sample_every) == 0:
-                #     with torch.no_grad():
-                #         # sample trajectory from training set, and evaluate difference
-                #         batch = train_sampling_batch
-                #         obs_dict = batch['obs']
-                #         gt_action = batch['action']
+                if (self.epoch % cfg.training.sample_every) == 0:
+                    with torch.no_grad():
+                        # sample trajectory from training set, and evaluate difference
+                        batch = train_sampling_batch
+                        obs_dict = batch['obs']
+                        gt_action = batch['action']
+
+                        vggt_obs_dict = {}
+                        vggt_obs_dict['head_cam'] = obs_dict['vggt_head_cam'].unsqueeze(0)
+                        vggt_obs_dict['front_cam'] = obs_dict['vggt_front_cam'].unsqueeze(0)
                         
-                #         result = policy.predict_action(obs_dict)
-                #         pred_action = result['action_pred']
-                #         mse = torch.nn.functional.mse_loss(pred_action, gt_action)
-                #         step_log['train_action_mse_error'] = mse.item()
-                #         del batch
-                #         del obs_dict
-                #         del gt_action
-                #         del result
-                #         del pred_action
-                #         del mse
+                        result = policy.predict_action_while_training(obs_dict, vggt_obs_dict)
+                        pred_action = result['action_pred']
+                        mse = torch.nn.functional.mse_loss(pred_action, gt_action)
+                        step_log['train_action_mse_error'] = mse.item()
+                        del batch
+                        del obs_dict
+                        del gt_action
+                        del result
+                        del pred_action
+                        del mse
                 
                 # checkpoint
                 if ((self.epoch + 1) % cfg.training.checkpoint_every) == 0:

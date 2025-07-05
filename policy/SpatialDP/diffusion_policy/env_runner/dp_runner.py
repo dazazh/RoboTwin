@@ -187,6 +187,7 @@ class DPRunner:
         obs_dict = dict_apply(np_obs_dict, lambda x: torch.from_numpy(x).to(device=device))
         
         # 预处理VGGT图像
+        # print("obs_dict['head_cam'].shape", obs_dict['head_cam'].shape)
         if vggt_obs_dict:
             processed_vggt_obs = {'head_cam': [], 'front_cam': []}
             for i in range(3):

@@ -284,6 +284,72 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             'action_pred': action_pred
         }
         return result
+    
+    def predict_action_while_training(self, obs_dict: Dict[str, torch.Tensor], vggt_obs_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        obs_dict: must include "obs" key
+        result: must include "action" key
+        """
+        assert 'past_action' not in obs_dict # not implemented yet
+        # normalize input for policy network
+        nobs = self.normalizer.normalize(obs_dict)
+        # keep original images for VGGT
+        value = next(iter(nobs.values()))
+        B, To = value.shape[:2]
+        T = self.horizon
+        Da = self.action_dim
+        Do = self.obs_feature_dim
+        To = self.n_obs_steps
+
+        # build input
+        device = self.device
+        dtype = self.dtype
+
+        # handle different ways of passing observation
+        local_cond = None
+        global_cond = None
+        if self.obs_as_global_cond:
+            # condition through global feature
+            this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
+            nobs_features, mse_loss = self.obs_encoder(this_nobs)
+            # reshape back to B, Do
+            global_cond = nobs_features.reshape(B, -1)
+            # empty data for action
+            cond_data = torch.zeros(size=(B, T, Da), device=device, dtype=dtype)
+            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+        else:
+            # condition through impainting
+            this_nobs = dict_apply(nobs, lambda x: x[:,:To,...].reshape(-1,*x.shape[2:]))
+            nobs_features, mse_loss = self.obs_encoder(this_nobs)
+            # reshape back to B, T, Do
+            nobs_features = nobs_features.reshape(B, To, -1)
+            cond_data = torch.zeros(size=(B, T, Da+Do), device=device, dtype=dtype)
+            cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+            cond_data[:,:To,Da:] = nobs_features
+            cond_mask[:,:To,Da:] = True
+
+        # run sampling
+        nsample = self.conditional_sample(
+            cond_data, 
+            cond_mask,
+            local_cond=local_cond,
+            global_cond=global_cond,
+            **self.kwargs)
+        
+        # unnormalize prediction
+        naction_pred = nsample[...,:Da]
+        action_pred = self.normalizer['action'].unnormalize(naction_pred)
+
+        # get action
+        start = To - 1
+        end = start + self.n_action_steps
+        action = action_pred[:,start:end]
+        
+        result = {
+            'action': action,
+            'action_pred': action_pred
+        }
+        return result
 
     # ========= training  ============
     def set_normalizer(self, normalizer: LinearNormalizer):

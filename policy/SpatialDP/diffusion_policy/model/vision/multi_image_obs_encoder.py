@@ -13,6 +13,8 @@ from .vggt_adapter import VGGTAdapter
 from vggt.models.vggt import VGGT
 import cv2
 import numpy as np
+import os
+import torchvision.transforms as T
 
 target_size = 518
 patch_size = 14
@@ -118,6 +120,23 @@ def load_vggt_model():
     model = VGGT()
     model.load_state_dict(torch.load("/data/user/xcs/yuhao/3d-aware/fast_vggt/vggt/checkpoint/original_model.pt"))
     return model
+
+def save_tensor_images(tensor, output_dir='output_images'):
+    """
+    将一个 [B, 3, H, W] 的tensor保存为图片，自动创建目录
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # 确保 tensor 是 CPU 上的并转换为 [0,255] 范围的uint8
+    if tensor.max() <= 1.0:
+        tensor = tensor * 255.0
+    tensor = tensor.byte().cpu()
+
+    # 转换为 [B, H, W, 3] 的格式再保存
+    for i, img_tensor in enumerate(tensor):
+        print("img_tensor.shape", img_tensor.shape)
+        img = T.ToPILImage()(img_tensor)  # 自动将 [3,H,W] 转为 PIL.Image
+        img.save(os.path.join(output_dir, f'image_{i}.png'))
 
 class MultiImageObsEncoder(ModuleAttrMixin):
     def __init__(self,
@@ -239,7 +258,11 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         fast_vggt_ckpt = torch.load('/data/user/xcs/yuhao/3d-aware/fast_vggt/checkpoints/normalized/vggt_predictor_epoch100.pth')
         self.fast_vggt_model.load_state_dict(fast_vggt_ckpt, strict=False)
         self.fast_vggt_model = self.fast_vggt_model.to(self.device)
-        self.vggt_adapter = VGGTAdapter(output_dim=512).to(self.device)
+
+        for param in self.fast_vggt_model.parameters():
+            param.requires_grad = False
+
+        self.vggt_adapter = VGGTAdapter().to(self.device)
         self.vggt_model = load_vggt_model().to(self.device)
         self.step = 0
         self.current_vggt_features = None
@@ -299,6 +322,7 @@ class MultiImageObsEncoder(ModuleAttrMixin):
 
         # run each rgb obs to independent models
         batch_fast_vggt = {}
+        rgb_features = {}
         for key in self.rgb_keys:
             img = obs_dict[key]
             # 由于postprocess删掉了原来的归一化，所以在这里需要重新归一化
@@ -310,22 +334,25 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             # fast_vggt_img = torch.randn_like(fast_vggt_img)
 
             img = self.key_transform_map[key](img)
-            feature = self.key_model_map[key](img)
 
-            features.append(feature)
+            rgb_features[key] = self.key_model_map[key](img)    
+            features.append(rgb_features[key])
+
             if key == 'head_cam':
                 batch_fast_vggt['head_img'] = obs_dict['vggt_head_cam']
             elif key == 'front_cam':
                 batch_fast_vggt['front_img'] = obs_dict['vggt_front_cam']
-        
-        # 确保所有张量都在正确的设备上
-        batch_fast_vggt['vggt_feat_t0'] = obs_dict['vggt_features']
-        vggt_features_t1_gt = obs_dict['vggt_features_current']
 
-        vggt_features_t1 = self.fast_vggt_model(batch_fast_vggt)
+        vggt_features_t1_gt = obs_dict['vggt_features_current']
+        if self.step % 5 == 0:
+            vggt_features_t1 = obs_dict['vggt_features_current']
+        else:
+            batch_fast_vggt['vggt_feat_t0'] = obs_dict['vggt_features']
+            vggt_features_t1 = self.fast_vggt_model(batch_fast_vggt)
         # print("vggt_features_t0", batch_fast_vggt['vggt_feat_t0'])
         # print("vggt_features_t1", vggt_features_t1)
         # print("vggt_features_t1_gt", vggt_features_t1_gt)
+        # print(vggt_features_t1.shape)
         mse_loss = torch.nn.functional.mse_loss(vggt_features_t1, vggt_features_t1_gt)
         # print("mse loss:", mse_loss)
 
@@ -346,11 +373,12 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         #         f'vggt_features_visualization_{self.visualization_counter}.png'
         #     )
         #     self.visualization_counter += 1
-        vggt_features = self.vggt_adapter(vggt_features_t1)
+        vggt_features = self.vggt_adapter(rgb_features['head_cam'], rgb_features['front_cam'], vggt_features_t1)
         features.append(vggt_features)
 
         # concatenate all features
         result = torch.cat(features, dim=-1)
+        self.step += 1
         return result, mse_loss
         
 
@@ -366,6 +394,10 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         batch_fast_vggt['head_img'] = vggt_head_img.to(dtype=torch.float32)
         batch_fast_vggt['front_img'] = vggt_front_img.to(dtype=torch.float32)
 
+        # print("vggt_head_img.shape", vggt_head_img.shape)
+        # save_tensor_images(vggt_head_img, '/data/user/xcs/yuhao/3d-aware/RoboTwin/policy/SpatialDP/output_images')
+        
+        rgb_features = {}
         for key in self.rgb_keys:
             img = obs_dict[key]
             vggt_img = vggt_obs_dict[key]
@@ -375,8 +407,8 @@ class MultiImageObsEncoder(ModuleAttrMixin):
                 assert batch_size == img.shape[0]
             assert img.shape[1:] == torch.Size(self.key_shape_map[key])
             img = self.key_transform_map[key](img)
-            feature = self.key_model_map[key](img)
-            features.append(feature)
+            rgb_features[key] = self.key_model_map[key](img)
+            features.append(rgb_features[key])
             # vggt_imgs.append(vggt_img)
             # if key == 'head_cam':
             #     batch_fast_vggt['head_img'] = obs_dict['vggt_head_cam'].to(dtype=torch.float32)
@@ -384,16 +416,16 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             #     batch_fast_vggt['front_img'] = obs_dict['vggt_front_cam'].to(dtype=torch.float32)
         
         # 确保所有张量都在正确的设备上
-        if self.step % 5 == 0:
+        if self.step % 5 == 0 or self.current_vggt_features is None:
             vggt_imgs = torch.stack(vggt_imgs, dim=1)
             vggt_features = extract_features(self.vggt_model, vggt_imgs, self.device)
             self.current_vggt_features = vggt_features
         else:
-            batch_fast_vggt['vggt_feat_t0'] = self.current_vggt_features.to(dtype=torch.float32)
+            batch_fast_vggt['vggt_feat_t0'] = self.current_vggt_features.to(dtype=torch.float32, device=self.device)
             batch_fast_vggt = batch_fast_vggt
             vggt_features = self.fast_vggt_model(batch_fast_vggt)
             self.current_vggt_features = vggt_features
-        vggt_features = self.vggt_adapter(vggt_features)
+        vggt_features = self.vggt_adapter(rgb_features['head_cam'], rgb_features['front_cam'], vggt_features)
 
         # 添加可视化
         # if self.training:  # 只在训练时可视化
@@ -402,7 +434,6 @@ class MultiImageObsEncoder(ModuleAttrMixin):
         #         f'vggt_features_visualization_{self.visualization_counter}.png'
         #     )
         #     self.visualization_counter += 1
-        features.append(vggt_features)
         
         # process lowdim input
         for key in self.low_dim_keys:
@@ -414,6 +445,8 @@ class MultiImageObsEncoder(ModuleAttrMixin):
             assert data.shape[1:] == self.key_shape_map[key]
             features.append(data)
         
+        features.append(vggt_features)
+
         # concatenate all features
         result = torch.cat(features, dim=-1)
         self.step += 1
